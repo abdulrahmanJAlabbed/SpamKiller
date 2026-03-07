@@ -1,98 +1,249 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+/**
+ * Home Dashboard — System Protected status, threats counter, scan button
+ */
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { BackgroundGlow } from '@/components/layout/BackgroundGlow';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { BorderRadius, Colors, FontSize, Spacing } from '@/constants/theme';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const insets = useSafeAreaInsets();
+  const [threatsBlocked] = useState(1248);
+  const [isScanning, setIsScanning] = useState(false);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const shieldScale = useRef(new Animated.Value(0.8)).current;
+  const shieldOpacity = useRef(new Animated.Value(0)).current;
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  useEffect(() => {
+    // Shield entrance animation
+    Animated.parallel([
+      Animated.spring(shieldScale, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shieldOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const handleScan = () => {
+    setIsScanning(true);
+    // Pulse animation during scan
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+      { iterations: 3 },
+    ).start(() => setIsScanning(false));
+  };
+
+  return (
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <BackgroundGlow />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <MaterialCommunityIcons name="shield" size={22} color={Colors.primary} />
+          <Text style={styles.headerTitle}>Shield OS</Text>
+        </View>
+        <Pressable style={styles.avatarBtn}>
+          <MaterialCommunityIcons name="account-circle-outline" size={28} color={Colors.textSecondary} />
+        </Pressable>
+      </View>
+
+      {/* Main content */}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Shield icon */}
+        <Animated.View
+          style={[
+            styles.shieldContainer,
+            {
+              transform: [{ scale: Animated.multiply(shieldScale, pulseAnim) }],
+              opacity: shieldOpacity,
+            },
+          ]}
+        >
+          <View style={styles.shieldCircle}>
+            <MaterialCommunityIcons
+              name="shield-check"
+              size={64}
+              color={Colors.primary}
+            />
+          </View>
+        </Animated.View>
+
+        {/* Status text */}
+        <Text style={styles.statusTitle}>System Protected</Text>
+        <Text style={styles.statusSubtitle}>Last check: 2 minutes ago</Text>
+
+        {/* Threats blocked card */}
+        <GlassCard style={styles.statsCard}>
+          <Text style={styles.statsLabel}>THREATS BLOCKED</Text>
+          <Text style={styles.statsValue}>{threatsBlocked.toLocaleString()}</Text>
+        </GlassCard>
+
+        {/* Scan button */}
+        <Pressable
+          onPress={handleScan}
+          disabled={isScanning}
+          style={({ pressed }) => [
+            styles.scanButton,
+            pressed && styles.scanButtonPressed,
+            isScanning && styles.scanButtonDisabled,
+          ]}
+        >
+          <Text style={styles.scanButtonText}>
+            {isScanning ? 'Scanning...' : 'Initialize Scan'}
+          </Text>
+        </Pressable>
+      </ScrollView>
+
+      {/* Bottom spacer for tab bar */}
+      <View style={{ height: 100 }} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.backgroundDark,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing['2xl'],
+    paddingVertical: Spacing.lg,
   },
-  stepContainer: {
-    gap: 8,
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerTitle: {
+    color: Colors.textPrimary,
+    fontSize: FontSize.base,
+    fontWeight: '500',
+    letterSpacing: -0.3,
+    fontFamily: 'Inter',
+  },
+  avatarBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing['2xl'],
+    paddingBottom: 40,
+  },
+  shieldContainer: {
+    marginBottom: 32,
+  },
+  shieldCircle: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: Colors.primaryGlow,
+    borderWidth: 0.5,
+    borderColor: Colors.primaryBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusTitle: {
+    color: Colors.textPrimary,
+    fontSize: FontSize['4xl'],
+    fontWeight: '300',
+    letterSpacing: -0.5,
     marginBottom: 8,
+    fontFamily: 'Inter',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  statusSubtitle: {
+    color: Colors.textMuted,
+    fontSize: FontSize.base,
+    letterSpacing: 0.3,
+    marginBottom: 48,
+    fontFamily: 'Inter',
+  },
+  statsCard: {
+    width: '80%',
+    maxWidth: 280,
+    alignItems: 'center',
+    marginBottom: 48,
+    backgroundColor: Colors.primaryGlow,
+  },
+  statsLabel: {
+    color: Colors.textMuted,
+    fontSize: FontSize.sm,
+    fontWeight: '500',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    fontFamily: 'Inter',
+  },
+  statsValue: {
+    color: Colors.textPrimary,
+    fontSize: FontSize['4xl'],
+    fontWeight: '300',
+    fontFamily: 'Inter',
+  },
+  scanButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 40,
+    paddingVertical: 14,
+    borderRadius: BorderRadius.full,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  scanButtonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  scanButtonDisabled: {
+    opacity: 0.7,
+  },
+  scanButtonText: {
+    color: Colors.white,
+    fontSize: FontSize.base,
+    fontWeight: '500',
+    letterSpacing: -0.3,
+    fontFamily: 'Inter',
   },
 });

@@ -1,53 +1,91 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Shield OS Design Tokens
+ * Centralized theme for the SpamKiller app matching the Shield OS design system.
  */
 
-import { Platform } from 'react-native';
-
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
-
 export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
-  },
+  primary: '#935af6',
+  primaryLight: 'rgba(147, 90, 246, 0.1)',
+  primaryBorder: 'rgba(147, 90, 246, 0.2)',
+  primaryGlow: 'rgba(147, 90, 246, 0.05)',
+
+  backgroundLight: '#f6f5f8',
+  backgroundDark: '#171022',
+  surfaceDark: '#1f1630',
+  borderDark: '#2e2839',
+
+  textPrimary: '#f1f5f9',    // slate-100
+  textSecondary: '#94a3b8',  // slate-400
+  textMuted: '#64748b',      // slate-500
+  textDark: '#0f172a',       // slate-900
+
+  white: '#ffffff',
+  black: '#000000',
+
+  // Status colors
+  blockedBg: 'rgba(127, 29, 29, 0.3)',
+  blockedText: 'rgba(248, 113, 113, 0.7)',
+  blockedBorder: 'rgba(127, 29, 29, 0.3)',
+
+  snoozedBg: 'rgba(120, 53, 15, 0.3)',
+  snoozedText: 'rgba(251, 191, 36, 0.7)',
+  snoozedBorder: 'rgba(120, 53, 15, 0.3)',
+
+  successGreen: '#22c55e',
+
+  // Glass effects
+  glassBackground: 'rgba(23, 16, 34, 0.7)',
+  glassBorder: 'rgba(147, 90, 246, 0.2)',
+  glassCardBg: 'rgba(147, 90, 246, 0.03)',
+  glassCardBorder: 'rgba(147, 90, 246, 0.05)',
+
+  // Toggle
+  toggleTrackOff: 'rgba(147, 90, 246, 0.2)',
+  toggleTrackOn: '#935af6',
+
+  // Slider  
+  sliderTrack: 'rgba(147, 90, 246, 0.2)',
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+export const Spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  '2xl': 24,
+  '3xl': 32,
+  '4xl': 40,
+  '5xl': 48,
+} as const;
+
+export const BorderRadius = {
+  sm: 4,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  '2xl': 20,
+  full: 9999,
+} as const;
+
+export const FontSize = {
+  '2xs': 10,
+  xs: 11,
+  sm: 12,
+  md: 13,
+  base: 14,
+  lg: 15,
+  xl: 16,
+  '2xl': 20,
+  '3xl': 24,
+  '4xl': 32,
+  '5xl': 40,
+} as const;
+
+export const FontWeight = {
+  light: '300' as const,
+  normal: '400' as const,
+  medium: '500' as const,
+  semibold: '600' as const,
+  bold: '700' as const,
+};
