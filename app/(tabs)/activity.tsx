@@ -9,10 +9,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+    LayoutAnimation,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -42,6 +44,8 @@ export default function ActivityScreen() {
     const insets = useSafeAreaInsets();
     const { t, i18n } = useTranslation();
     const isRTL = i18n.dir() === 'rtl';
+    const [isSearching, setIsSearching] = React.useState(false);
+    const [searchQuery, setSearchQuery] = React.useState('');
 
     const getCategoryKey = (id: string) => {
         const keyMap: Record<string, string> = {
@@ -56,11 +60,29 @@ export default function ActivityScreen() {
         <View style={[styles.screen, { paddingTop: insets.top }]}>
             <ScreenHeader
                 title={t('activity.title')}
-                rightIcon="magnify"
+                rightIcon={isSearching ? "close" : "magnify"}
                 onRightPress={() => {
-                    // Visual feedback or placeholder action
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setIsSearching(!isSearching);
+                    if (isSearching) setSearchQuery('');
                 }}
             />
+
+            {isSearching && (
+                <View style={styles.searchContainer}>
+                    <View style={[styles.searchInputWrapper, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                        <MaterialCommunityIcons name="magnify" size={20} color={Colors.textMuted} />
+                        <TextInput
+                            style={[styles.searchInput, { textAlign: isRTL ? 'right' : 'left' }]}
+                            placeholder={t('blocklist.blockTextPlaceholder') || "Search..."}
+                            placeholderTextColor={Colors.textMuted}
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            autoFocus
+                        />
+                    </View>
+                </View>
+            )}
 
             <ScrollView
                 contentContainerStyle={styles.content}
@@ -83,9 +105,9 @@ export default function ActivityScreen() {
                             <View style={[styles.iconWrapper, { backgroundColor: cat.bgColor }]}>
                                 <MaterialCommunityIcons name={cat.icon} size={28} color={cat.color} />
                             </View>
-                            <View style={styles.textContainer}>
-                                <Text style={styles.cardLabel}>{t(`activity.${getCategoryKey(cat.id)}`)}</Text>
-                                <Text style={styles.cardCount}>{t('activity.messagesCount', { count: cat.count })}</Text>
+                            <View style={[styles.textContainer, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+                                <Text style={[styles.cardLabel, { textAlign: isRTL ? 'right' : 'left' }]}>{t(`activity.${getCategoryKey(cat.id)}`)}</Text>
+                                <Text style={[styles.cardCount, { textAlign: isRTL ? 'right' : 'left', marginTop: 4 }]}>{t('activity.messagesCount', { count: cat.count })}</Text>
                             </View>
                         </Pressable>
                     ))}
@@ -105,6 +127,27 @@ const styles = StyleSheet.create({
     content: {
         paddingHorizontal: Spacing['2xl'],
         paddingTop: Spacing.md,
+    },
+    searchContainer: {
+        paddingHorizontal: Spacing['2xl'],
+        paddingBottom: Spacing.md,
+    },
+    searchInputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.surfaceDark,
+        borderRadius: BorderRadius.xl,
+        borderWidth: 1,
+        borderColor: Colors.borderDark,
+        paddingHorizontal: 12,
+        height: 48,
+        gap: 8,
+    },
+    searchInput: {
+        flex: 1,
+        color: Colors.textPrimary,
+        fontSize: FontSize.base,
+        fontFamily: 'Inter',
     },
     subtitle: {
         color: Colors.textMuted,
