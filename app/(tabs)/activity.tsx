@@ -105,9 +105,8 @@ export default function ActivityScreen() {
                             <View style={[styles.iconWrapper, { backgroundColor: cat.bgColor }]}>
                                 <MaterialCommunityIcons name={cat.icon} size={28} color={cat.color} />
                             </View>
-                            <View style={[styles.textContainer, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+                            <View style={[styles.textContainer, { alignItems: isRTL ? 'flex-end' : 'flex-start', paddingTop: 8 }]}>
                                 <Text style={[styles.cardLabel, { textAlign: isRTL ? 'right' : 'left' }]}>{t(`activity.${getCategoryKey(cat.id)}`)}</Text>
-                                <Text style={[styles.cardCount, { textAlign: isRTL ? 'right' : 'left', marginTop: 4 }]}>{t('activity.messagesCount', { count: cat.count })}</Text>
                             </View>
                         </Pressable>
                     ))}
