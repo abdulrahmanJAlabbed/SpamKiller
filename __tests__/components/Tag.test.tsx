@@ -19,7 +19,7 @@ describe('Tag Component', () => {
         );
 
         // Find the MaterialCommunityIcons mock which represents the close button
-        const closeButton = UNSAFE_getByType('MaterialCommunityIcons');
+        const closeButton = UNSAFE_getByType('MaterialCommunityIcons' as any);
         expect(closeButton).toBeTruthy();
 
         // Parent is a Pressable, trigger press on the icon wrapper
