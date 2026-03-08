@@ -44,7 +44,9 @@
           }
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "./plugin/withSmsFilterExtension",
+      "./plugin/withAndroidSmsReceiver"
     ],
     "experiments": {
       "typedRoutes": true,
