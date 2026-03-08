@@ -6,6 +6,7 @@ import { Colors, FontSize, Spacing } from '@/constants/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface ScreenHeaderProps {
@@ -23,14 +24,17 @@ export function ScreenHeader({
     rightIcon,
     onRightPress,
 }: ScreenHeaderProps) {
+    const { i18n } = useTranslation();
+    const isRTL = i18n.dir() === 'rtl';
+
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             {showBack ? (
                 <Pressable
                     onPress={onBack ?? (() => router.back())}
                     style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
                 >
-                    <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textSecondary} />
+                    <MaterialCommunityIcons name={isRTL ? "arrow-right" : "arrow-left"} size={24} color={Colors.textSecondary} />
                 </Pressable>
             ) : (
                 <View style={styles.iconBtn} />

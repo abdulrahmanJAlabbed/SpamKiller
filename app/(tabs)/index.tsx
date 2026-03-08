@@ -8,6 +8,7 @@ import { BorderRadius, Colors, FontSize, Spacing } from '@/constants/theme';
 import { useSpamFilter, type ScanResultItem } from '@/contexts/SpamFilterContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Animated,
   Pressable,
@@ -18,30 +19,33 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-function BlockedMessageCard({ item }: { item: ScanResultItem }) {
-  const timeAgo = getTimeAgo(item.timestamp);
+function BlockedMessageCard({ item, t }: { item: ScanResultItem; t: any }) {
+  const timeAgo = getTimeAgo(item.timestamp, t);
+  const { i18n } = useTranslation();
+  const isRTL = i18n.dir() === 'rtl';
+
   return (
-    <View style={styles.blockedCard}>
-      <View style={styles.blockedLeft}>
+    <View style={[styles.blockedCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+      <View style={[styles.blockedLeft, { flexDirection: isRTL ? 'row-reverse' : 'row', marginRight: isRTL ? 0 : 12, marginLeft: isRTL ? 12 : 0 }]}>
         <View style={styles.blockedIconWrap}>
           <MaterialCommunityIcons name="shield-off" size={18} color="#ef4444" />
         </View>
-        <View style={styles.blockedInfo}>
-          <Text style={styles.blockedSender} numberOfLines={1}>
-            {item.sender || 'Unknown'}
+        <View style={[styles.blockedInfo, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+          <Text style={[styles.blockedSender, { textAlign: isRTL ? 'right' : 'left' }]} numberOfLines={1}>
+            {item.sender || t('home.unknown')}
           </Text>
-          <Text style={styles.blockedText} numberOfLines={1}>
+          <Text style={[styles.blockedText, { textAlign: isRTL ? 'right' : 'left' }]} numberOfLines={1}>
             {item.text}
           </Text>
         </View>
       </View>
-      <View style={styles.blockedRight}>
+      <View style={[styles.blockedRight, { alignItems: isRTL ? 'flex-start' : 'flex-end' }]}>
         <Text style={styles.blockedTime}>{timeAgo}</Text>
         <View style={styles.blockedBadge}>
-          <Text style={styles.blockedBadgeText}>
+          <Text style={[styles.blockedBadgeText, { textAlign: isRTL ? 'right' : 'left' }]}>
             {item.result.matchedKeywords.length > 0
               ? item.result.matchedKeywords[0]
-              : 'spam'}
+              : t('home.spam')}
           </Text>
         </View>
       </View>
@@ -49,19 +53,22 @@ function BlockedMessageCard({ item }: { item: ScanResultItem }) {
   );
 }
 
-function getTimeAgo(timestamp: number): string {
+function getTimeAgo(timestamp: number, t: any): string {
   const diff = Date.now() - timestamp;
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t('home.justNow');
+  if (mins < 60) return t('home.mAgo', { count: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return t('home.hAgo', { count: hours });
+  return t('home.dAgo', { count: Math.floor(hours / 24) });
 }
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { threatsBlocked, scanResults, aiEnabled } = useSpamFilter();
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.dir() === 'rtl';
+
   const shieldScale = useRef(new Animated.Value(0.8)).current;
   const shieldOpacity = useRef(new Animated.Value(0)).current;
 
@@ -100,10 +107,10 @@ export default function HomeScreen() {
       <BackgroundGlow />
 
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
+      <View style={[styles.header, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+        <View style={[styles.headerLeft, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
           <MaterialCommunityIcons name="shield" size={22} color={Colors.primary} />
-          <Text style={styles.headerTitle}>Shield OS</Text>
+          <Text style={styles.headerTitle}>{t('home.shieldOS')}</Text>
         </View>
         {/* Profile Avatar removed per user request */}
       </View>
@@ -139,29 +146,29 @@ export default function HomeScreen() {
 
         {/* Status text */}
         <Text style={styles.statusTitle}>
-          {isActive ? 'System Protected' : 'Protection Disabled'}
+          {isActive ? t('home.systemProtected') : t('home.protectionDisabled')}
         </Text>
-        <Text style={styles.statusSubtitle}>
-          {isActive ? 'SpamKiller is actively filtering SMS.' : 'Tap shield to enable SpamKiller.'}
+        <Text style={[styles.statusSubtitle, { textAlign: 'center' }]}>
+          {isActive ? t('home.activelyFiltering') : t('home.tapToEnable')}
         </Text>
 
         {aiEnabled && isActive && (
-          <View style={styles.proBadge}>
+          <View style={[styles.proBadge, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <MaterialCommunityIcons name="star-four-points" size={16} color="#f59e0b" />
-            <Text style={styles.proBadgeText}>Neural Engine Active</Text>
+            <Text style={styles.proBadgeText}>{t('home.neuralEngineActive')}</Text>
           </View>
         )}
 
         {/* Threats blocked card */}
         <GlassCard style={styles.statsCard}>
-          <Text style={styles.statsLabel}>THREATS BLOCKED</Text>
+          <Text style={styles.statsLabel}>{t('home.threatsBlocked')}</Text>
           <Text style={styles.statsValue}>{threatsBlocked.toLocaleString()}</Text>
         </GlassCard>
 
         {/* Recent Blocked Messages */}
         <View style={styles.recentSection}>
-          <View style={styles.recentHeader}>
-            <Text style={styles.recentTitle}>RECENT BLOCKED</Text>
+          <View style={[styles.recentHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+            <Text style={[styles.recentTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('home.recentBlocked')}</Text>
             {blockedMessages.length > 0 && (
               <View style={styles.recentCountBadge}>
                 <Text style={styles.recentCountText}>{blockedMessages.length}</Text>
@@ -172,7 +179,7 @@ export default function HomeScreen() {
           {blockedMessages.length > 0 ? (
             <View style={styles.recentList}>
               {blockedMessages.map((item) => (
-                <BlockedMessageCard key={item.id} item={item} />
+                <BlockedMessageCard key={item.id} item={item} t={t} />
               ))}
             </View>
           ) : (
@@ -183,7 +190,7 @@ export default function HomeScreen() {
                 color={Colors.primaryBorder}
               />
               <Text style={styles.recentEmptyText}>
-                No blocked messages yet. Threats will appear here when detected.
+                {t('home.noBlockedMessages')}
               </Text>
             </View>
           )}

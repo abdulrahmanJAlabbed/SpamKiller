@@ -5,6 +5,7 @@
 import { BorderRadius, Colors, FontSize, Spacing } from '@/constants/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ToggleSwitch } from './ToggleSwitch';
 
@@ -27,6 +28,8 @@ export function SettingsRow({
     onPress,
     showChevron,
 }: SettingsRowProps) {
+    const { i18n } = useTranslation();
+    const isRTL = i18n.dir() === 'rtl';
     const Container = onPress ? Pressable : View;
 
     return (
@@ -34,13 +37,14 @@ export function SettingsRow({
             onPress={onPress}
             style={({ pressed }: { pressed?: boolean }) => [
                 styles.container,
+                { flexDirection: isRTL ? 'row-reverse' : 'row' },
                 pressed && styles.pressed,
             ]}
         >
             <View style={styles.iconContainer}>
                 <MaterialCommunityIcons name={icon} size={22} color={Colors.primary} />
             </View>
-            <View style={styles.content}>
+            <View style={[styles.content, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
                 <Text style={styles.label}>{label}</Text>
                 {description && <Text style={styles.description}>{description}</Text>}
             </View>
@@ -48,7 +52,7 @@ export function SettingsRow({
                 <ToggleSwitch value={value} onValueChange={onValueChange} />
             )}
             {showChevron && (
-                <MaterialCommunityIcons name="chevron-right" size={20} color={Colors.textMuted} />
+                <MaterialCommunityIcons name={isRTL ? "chevron-left" : "chevron-right"} size={20} color={Colors.textMuted} />
             )}
         </Container>
     );

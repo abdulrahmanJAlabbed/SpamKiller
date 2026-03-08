@@ -10,6 +10,7 @@ import { useSpamFilter } from '@/contexts/SpamFilterContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Alert,
     Pressable,
@@ -25,6 +26,8 @@ const MAX_FREE_SLOTS = 7;
 
 export default function BlocklistScreen() {
     const insets = useSafeAreaInsets();
+    const { t, i18n } = useTranslation();
+    const isRTL = i18n.dir() === 'rtl';
     const { keywords, addKeyword, removeKeyword } = useSpamFilter();
     const [inputText, setInputText] = useState('');
 
@@ -42,12 +45,12 @@ export default function BlocklistScreen() {
 
         const success = addKeyword(trimmed);
         if (!success) {
-            Alert.alert('Duplicate', 'This keyword is already in your blocklist.');
+            Alert.alert(t('blocklist.duplicateTitle'), t('blocklist.duplicateMessage'));
             return;
         }
 
         setInputText('');
-    }, [inputText, slotsFull, addKeyword]);
+    }, [inputText, slotsFull, addKeyword, t]);
 
     const handleRemoveKeyword = useCallback((id: string) => {
         removeKeyword(id);
@@ -56,7 +59,7 @@ export default function BlocklistScreen() {
     return (
         <View style={[styles.screen, { paddingTop: insets.top }]}>
             <ScreenHeader
-                title="Blocklist"
+                title={t('blocklist.title')}
             />
 
             <ScrollView
@@ -65,10 +68,10 @@ export default function BlocklistScreen() {
             >
                 {/* Usage limit card */}
                 <GlassCard style={styles.usageCard}>
-                    <View style={styles.usageHeader}>
-                        <Text style={styles.usageLabel}>USAGE LIMIT</Text>
+                    <View style={[styles.usageHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                        <Text style={styles.usageLabel}>{t('blocklist.usageLimit')}</Text>
                         <Text style={styles.usageCount}>
-                            {slotsUsed} / {MAX_FREE_SLOTS} Slots
+                            {t('blocklist.slots', { used: slotsUsed, max: MAX_FREE_SLOTS })}
                         </Text>
                     </View>
                     <View style={styles.progressTrack}>
@@ -79,18 +82,18 @@ export default function BlocklistScreen() {
                             ]}
                         />
                     </View>
-                    <View style={styles.usageFooter}>
-                        <Text style={styles.usageFooterText}>Free tier active</Text>
+                    <View style={[styles.usageFooter, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                        <Text style={[styles.usageFooterText, { textAlign: isRTL ? 'right' : 'left' }]}>{t('blocklist.freeTierActive')}</Text>
                         <Pressable onPress={() => router.push('/upgrade?variant=filter')}>
-                            <Text style={styles.upgradeLink}>Upgrade for more slots</Text>
+                            <Text style={styles.upgradeLink}>{t('blocklist.upgradeForMore')}</Text>
                         </Pressable>
                     </View>
                 </GlassCard>
 
                 {/* Active blocklist */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>ACTIVE BLOCKLIST</Text>
-                    <View style={styles.tagsContainer}>
+                    <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('blocklist.activeBlocklist')}</Text>
+                    <View style={[styles.tagsContainer, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                         {keywords.map((keyword) => (
                             <Tag
                                 key={keyword.id}
@@ -103,13 +106,13 @@ export default function BlocklistScreen() {
 
                 {/* Add keyword input */}
                 <View style={styles.inputSection}>
-                    <View style={styles.inputContainer}>
+                    <View style={[styles.inputContainer, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                         <TextInput
                             value={inputText}
                             onChangeText={setInputText}
-                            placeholder="Block text..."
+                            placeholder={t('blocklist.blockTextPlaceholder')}
                             placeholderTextColor={Colors.textMuted}
-                            style={styles.input}
+                            style={[styles.input, { textAlign: isRTL ? 'right' : 'left' }]}
                             onSubmitEditing={handleAddKeyword}
                             returnKeyType="done"
                         />
@@ -123,8 +126,8 @@ export default function BlocklistScreen() {
                             <MaterialCommunityIcons name="plus" size={24} color={Colors.primary} />
                         </Pressable>
                     </View>
-                    <Text style={styles.inputHint}>
-                        Rules are applied instantly to all incoming traffic.
+                    <Text style={[styles.inputHint, { textAlign: isRTL ? 'right' : 'left' }]}>
+                        {t('blocklist.rulesAppliedInstantly')}
                     </Text>
                 </View>
             </ScrollView>

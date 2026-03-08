@@ -7,42 +7,45 @@ import type { UpgradeConfig, UpgradeVariant } from '@/types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-
-const UPGRADE_CONFIGS: Record<UpgradeVariant, UpgradeConfig> = {
-    filter: {
-        title: 'Pro Filter Upgrade',
-        subtitle: 'Lifetime Access',
-        description: 'Take full control of your security. Add unlimited custom keywords for just',
-        price: '$3',
-        icon: 'star-circle',
-        features: [
-            'Unlimited Custom Keywords',
-            'Instant Threat Blocking',
-            'Ad-Free Experience',
-        ],
-        ctaText: 'Upgrade Now',
-    },
-    ai: {
-        title: 'Neural Shield',
-        subtitle: 'Ultimate Protection',
-        description: 'Enable full AI auto-detection and unlimited keywords for',
-        price: '$10',
-        icon: 'shield-check',
-        features: [
-            'Full Neural Auto-detection',
-            'Zero-day Spam Protection',
-            'Privacy-Preserving Local ML',
-        ],
-        ctaText: 'Activate Neural Protection',
-    },
-};
 
 interface UpgradeModalProps {
     variant: UpgradeVariant;
 }
 
 export function UpgradeModal({ variant }: UpgradeModalProps) {
+    const { t } = useTranslation();
+
+    const UPGRADE_CONFIGS: Record<UpgradeVariant, UpgradeConfig> = {
+        filter: {
+            title: t('upgrade.filterTitle'),
+            subtitle: t('upgrade.filterSubtitle'),
+            description: t('upgrade.filterDesc'),
+            price: '$3',
+            icon: 'star-circle',
+            features: [
+                t('upgrade.filterFeat1'),
+                t('upgrade.filterFeat2'),
+                t('upgrade.filterFeat3'),
+            ],
+            ctaText: t('upgrade.filterCta'),
+        },
+        ai: {
+            title: t('upgrade.aiTitle'),
+            subtitle: t('upgrade.aiSubtitle'),
+            description: t('upgrade.aiDesc'),
+            price: '$10',
+            icon: 'shield-check',
+            features: [
+                t('upgrade.aiFeat1'),
+                t('upgrade.aiFeat2'),
+                t('upgrade.aiFeat3'),
+            ],
+            ctaText: t('upgrade.aiCta'),
+        },
+    };
+
     const config = UPGRADE_CONFIGS[variant];
 
     return (
@@ -103,7 +106,7 @@ export function UpgradeModal({ variant }: UpgradeModalProps) {
                         onPress={() => router.back()}
                         style={styles.dismissButton}
                     >
-                        <Text style={styles.dismissText}>Not now</Text>
+                        <Text style={styles.dismissText}>{t('upgrade.notNow')}</Text>
                     </Pressable>
                 </ScrollView>
 
@@ -111,11 +114,11 @@ export function UpgradeModal({ variant }: UpgradeModalProps) {
                 <View style={styles.footer}>
                     <View style={styles.footerItem}>
                         <MaterialCommunityIcons name="lock" size={12} color={Colors.textMuted} />
-                        <Text style={styles.footerText}>Secure Payment</Text>
+                        <Text style={styles.footerText}>{t('upgrade.securePayment')}</Text>
                     </View>
                     <View style={styles.footerItem}>
                         <MaterialCommunityIcons name="history" size={12} color={Colors.textMuted} />
-                        <Text style={styles.footerText}>One-time charge</Text>
+                        <Text style={styles.footerText}>{t('upgrade.oneTimeCharge')}</Text>
                     </View>
                 </View>
             </View>

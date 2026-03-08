@@ -6,6 +6,7 @@ import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { BorderRadius, Colors, FontSize, Spacing } from '@/constants/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -20,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SilencedScreen() {
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation();
     const [phoneNumber, setPhoneNumber] = useState('');
     const [silencedList, setSilencedList] = useState([
         '+1 (555) 019-2831',
@@ -47,7 +49,7 @@ export default function SilencedScreen() {
             style={[styles.screen, { paddingTop: insets.top }]}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <ScreenHeader title="Silenced Numbers" />
+            <ScreenHeader title={t('silenced.title')} />
 
             <ScrollView
                 contentContainerStyle={styles.content}
@@ -55,7 +57,7 @@ export default function SilencedScreen() {
                 keyboardShouldPersistTaps="handled"
             >
                 <Text style={styles.description}>
-                    Messages from these numbers will be silently ignored. You won't be notified.
+                    {t('silenced.description')}
                 </Text>
 
                 {/* Input area */}
@@ -64,7 +66,7 @@ export default function SilencedScreen() {
                         <TextInput
                             value={phoneNumber}
                             onChangeText={setPhoneNumber}
-                            placeholder="e.g. +1 555-123-4567"
+                            placeholder={t('silenced.placeholder')}
                             placeholderTextColor={Colors.textMuted}
                             style={styles.input}
                             keyboardType="phone-pad"
@@ -86,7 +88,7 @@ export default function SilencedScreen() {
 
                 {/* List */}
                 <View style={styles.listSection}>
-                    <Text style={styles.listTitle}>SILENCED NUMBERS ({silencedList.length})</Text>
+                    <Text style={styles.listTitle}>{t('silenced.listTitle', { count: silencedList.length })}</Text>
 
                     <View style={styles.list}>
                         {silencedList.map((num) => (
@@ -104,7 +106,7 @@ export default function SilencedScreen() {
                                         pressed && { opacity: 0.7 }
                                     ]}
                                 >
-                                    <Text style={styles.removeText}>Remove</Text>
+                                    <Text style={styles.removeText}>{t('silenced.remove')}</Text>
                                 </Pressable>
                             </View>
                         ))}
@@ -116,7 +118,7 @@ export default function SilencedScreen() {
                                     size={48}
                                     color={Colors.primaryBorder}
                                 />
-                                <Text style={styles.emptyTitle}>No silenced numbers</Text>
+                                <Text style={styles.emptyTitle}>{t('silenced.noSilencedNumbers')}</Text>
                             </View>
                         )}
                     </View>

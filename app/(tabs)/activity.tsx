@@ -7,6 +7,7 @@ import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { BorderRadius, Colors, FontSize, Spacing } from '@/constants/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Pressable,
     ScrollView,
@@ -20,7 +21,6 @@ type CategoryIcon = keyof typeof MaterialCommunityIcons.glyphMap;
 
 interface Category {
     id: string;
-    label: string;
     icon: CategoryIcon;
     color: string;
     bgColor: string;
@@ -28,37 +28,55 @@ interface Category {
 }
 
 const CATEGORIES: Category[] = [
-    { id: 'scam', label: 'Scam & Phishing', icon: 'shield-alert', color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.1)', count: 42 },
-    { id: 'promos', label: 'Promos & Coupons', icon: 'tag-multiple', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)', count: 128 },
-    { id: 'otp', label: 'OTP & Auth', icon: 'key-variant', color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)', count: 56 },
-    { id: 'bank', label: 'Banking & Bills', icon: 'bank', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)', count: 24 },
-    { id: 'delivery', label: 'Deliveries', icon: 'truck-delivery', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)', count: 18 },
-    { id: 'health', label: 'Health & Medical', icon: 'heart-pulse', color: '#f43f5e', bgColor: 'rgba(244, 63, 94, 0.1)', count: 7 },
-    { id: 'work', label: 'Work & Teams', icon: 'briefcase', color: '#0ea5e9', bgColor: 'rgba(14, 165, 233, 0.1)', count: 35 },
-    { id: 'others', label: 'Others', icon: 'dots-grid', color: '#94a3b8', bgColor: 'rgba(148, 163, 184, 0.1)', count: 89 },
+    { id: 'scam', icon: 'shield-alert', color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.1)', count: 42 },
+    { id: 'promos', icon: 'tag-multiple', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)', count: 128 },
+    { id: 'otp', icon: 'key-variant', color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)', count: 56 },
+    { id: 'bank', icon: 'bank', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)', count: 24 },
+    { id: 'delivery', icon: 'truck-delivery', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)', count: 18 },
+    { id: 'health', icon: 'heart-pulse', color: '#f43f5e', bgColor: 'rgba(244, 63, 94, 0.1)', count: 7 },
+    { id: 'work', icon: 'briefcase', color: '#0ea5e9', bgColor: 'rgba(14, 165, 233, 0.1)', count: 35 },
+    { id: 'others', icon: 'dots-grid', color: '#94a3b8', bgColor: 'rgba(148, 163, 184, 0.1)', count: 89 },
 ];
 
 export default function ActivityScreen() {
     const insets = useSafeAreaInsets();
+    const { t, i18n } = useTranslation();
+    const isRTL = i18n.dir() === 'rtl';
+
+    const getCategoryKey = (id: string) => {
+        const keyMap: Record<string, string> = {
+            'scam': 'catScam', 'promos': 'catPromos', 'otp': 'catOtp',
+            'bank': 'catBank', 'delivery': 'catDelivery', 'health': 'catHealth',
+            'work': 'catWork', 'others': 'catOthers'
+        };
+        return keyMap[id] || 'catOthers';
+    };
 
     return (
         <View style={[styles.screen, { paddingTop: insets.top }]}>
-            <ScreenHeader title="Categories" rightIcon="magnify" onRightPress={() => { }} />
+            <ScreenHeader
+                title={t('activity.title')}
+                rightIcon="magnify"
+                onRightPress={() => {
+                    // Visual feedback or placeholder action
+                }}
+            />
 
             <ScrollView
                 contentContainerStyle={styles.content}
                 showsVerticalScrollIndicator={false}
             >
-                <Text style={styles.subtitle}>
-                    AI automatically categorizes your incoming messages.
+                <Text style={[styles.subtitle, { textAlign: isRTL ? 'right' : 'left' }]}>
+                    {t('activity.subtitle')}
                 </Text>
 
-                <View style={styles.gridContainer}>
+                <View style={[styles.gridContainer, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                     {CATEGORIES.map((cat) => (
                         <Pressable
                             key={cat.id}
                             style={({ pressed }) => [
                                 styles.card,
+                                { alignItems: isRTL ? 'flex-end' : 'flex-start' },
                                 pressed && styles.cardPressed,
                             ]}
                         >
@@ -66,8 +84,8 @@ export default function ActivityScreen() {
                                 <MaterialCommunityIcons name={cat.icon} size={28} color={cat.color} />
                             </View>
                             <View style={styles.textContainer}>
-                                <Text style={styles.cardLabel}>{cat.label}</Text>
-                                <Text style={styles.cardCount}>{cat.count} messages</Text>
+                                <Text style={styles.cardLabel}>{t(`activity.${getCategoryKey(cat.id)}`)}</Text>
+                                <Text style={styles.cardCount}>{t('activity.messagesCount', { count: cat.count })}</Text>
                             </View>
                         </Pressable>
                     ))}

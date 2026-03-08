@@ -38,6 +38,7 @@ const LANGUAGES: LanguageOption[] = [
 export default function SettingsScreen() {
     const insets = useSafeAreaInsets();
     const { t, i18n } = useTranslation();
+    const isRTL = i18n.dir() === 'rtl';
 
     // Core states
     const [notifications, setNotifications] = useState(true);
@@ -151,8 +152,8 @@ export default function SettingsScreen() {
             >
                 {/* Core Security Toggles */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>{t('settings.securityAlerts')}</Text>
-                    <View style={styles.securityGrid}>
+                    <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings.securityAlerts')}</Text>
+                    <View style={[styles.securityGrid, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                         {/* App Lock Card */}
                         <Pressable
                             onPress={() => handleToggleBiometric(!biometricAuth)}
@@ -161,7 +162,7 @@ export default function SettingsScreen() {
                                 biometricAuth && styles.securityFeatureCardActive
                             ]}
                         >
-                            <View style={styles.securityTopRow}>
+                            <View style={[styles.securityTopRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                                 <View style={[styles.securityFeatureIcon, biometricAuth && styles.securityFeatureIconActive]}>
                                     <MaterialCommunityIcons
                                         name={biometricAuth ? "fingerprint" : "fingerprint-off"}
@@ -171,9 +172,9 @@ export default function SettingsScreen() {
                                 </View>
                                 <View style={[styles.securityStatusDot, biometricAuth && styles.securityStatusDotActive]} />
                             </View>
-                            <View style={styles.securityFeatureText}>
+                            <View style={[styles.securityFeatureText, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
                                 <Text style={styles.securityFeatureTitle}>{t('settings.appLock')}</Text>
-                                <Text style={styles.securityFeatureSubtitle}>
+                                <Text style={[styles.securityFeatureSubtitle, { textAlign: isRTL ? 'right' : 'left' }]}>
                                     {biometricAuth ? t('settings.securedBiometrics') : t('settings.tapEnable')}
                                 </Text>
                             </View>
@@ -187,7 +188,7 @@ export default function SettingsScreen() {
                                 notifications && styles.securityFeatureCardActive
                             ]}
                         >
-                            <View style={styles.securityTopRow}>
+                            <View style={[styles.securityTopRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                                 <View style={[styles.securityFeatureIcon, notifications && styles.securityFeatureIconActive]}>
                                     <MaterialCommunityIcons
                                         name={notifications ? "bell-ring" : "bell-off-outline"}
@@ -197,9 +198,9 @@ export default function SettingsScreen() {
                                 </View>
                                 <View style={[styles.securityStatusDot, notifications && styles.securityStatusDotActive]} />
                             </View>
-                            <View style={styles.securityFeatureText}>
+                            <View style={[styles.securityFeatureText, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
                                 <Text style={styles.securityFeatureTitle}>{t('settings.alerts')}</Text>
-                                <Text style={styles.securityFeatureSubtitle}>
+                                <Text style={[styles.securityFeatureSubtitle, { textAlign: isRTL ? 'right' : 'left' }]}>
                                     {notifications ? t('settings.liveUpdatesOn') : t('settings.currentlyMuted')}
                                 </Text>
                             </View>
@@ -209,7 +210,7 @@ export default function SettingsScreen() {
 
                 {/* AI Settings link */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>{t('settings.aiProtection')}</Text>
+                    <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings.aiProtection')}</Text>
                     <View style={styles.settingsCard}>
                         <SettingsRow
                             icon="brain"
@@ -223,17 +224,18 @@ export default function SettingsScreen() {
 
                 {/* Language Dropdown */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>{t('settings.systemLanguage')}</Text>
+                    <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings.systemLanguage')}</Text>
 
                     {/* Dropdown trigger */}
                     <Pressable
                         onPress={() => setLanguageDropdownOpen(!languageDropdownOpen)}
                         style={[
                             styles.dropdownTrigger,
+                            { flexDirection: isRTL ? 'row-reverse' : 'row' },
                             languageDropdownOpen && styles.dropdownTriggerOpen,
                         ]}
                     >
-                        <View style={styles.dropdownSelected}>
+                        <View style={[styles.dropdownSelected, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                             <Text style={styles.dropdownFlag}>{currentLang.flag}</Text>
                             <Text style={styles.dropdownName}>{currentLang.name}</Text>
                         </View>
@@ -255,12 +257,13 @@ export default function SettingsScreen() {
                                         <Pressable
                                             style={({ pressed }) => [
                                                 styles.dropdownItem,
+                                                { flexDirection: isRTL ? 'row-reverse' : 'row' },
                                                 isSelected && styles.dropdownItemSelected,
                                                 pressed && styles.dropdownItemPressed,
                                             ]}
                                             onPress={() => handleSelectLanguage(lang.code)}
                                         >
-                                            <View style={styles.dropdownItemLeft}>
+                                            <View style={[styles.dropdownItemLeft, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                                                 <Text style={styles.dropdownItemFlag}>{lang.flag}</Text>
                                                 <Text style={[
                                                     styles.dropdownItemName,
@@ -286,9 +289,9 @@ export default function SettingsScreen() {
 
                 {/* Buy us a Coffee */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>{t('settings.supportUs')}</Text>
+                    <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings.supportUs')}</Text>
                     <View style={styles.coffeeCard}>
-                        <View style={styles.coffeeHeader}>
+                        <View style={[styles.coffeeHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                             <MaterialCommunityIcons
                                 name="coffee-outline"
                                 size={26}
