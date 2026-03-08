@@ -38,7 +38,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           const tab = TABS[index];
           if (!tab) return null;
 
-          const tabNameKey = tab.name === 'index' ? 'home' : tab.name;
+          const tabNameKey = tab.name === 'index' ? 'home' : tab.name === 'activity' ? 'categories' : tab.name;
 
           return (
             <Pressable
