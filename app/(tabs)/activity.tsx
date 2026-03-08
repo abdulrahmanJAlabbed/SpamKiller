@@ -1,13 +1,12 @@
 /**
- * Activity Vault — Activity log with tabs and status badges
+ * Activity / Categories Vault
+ * Shows modern AI categories for filtered messages using a grid layout
  */
 
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { BorderRadius, Colors, FontSize, Spacing } from '@/constants/theme';
-import type { ActivityItem } from '@/types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React from 'react';
 import {
     Pressable,
     ScrollView,
@@ -17,149 +16,62 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type TabFilter = 'all' | 'blocked' | 'snoozed';
+type CategoryIcon = keyof typeof MaterialCommunityIcons.glyphMap;
 
-const ACTIVITIES: ActivityItem[] = [
-    {
-        id: '1',
-        title: 'System Update Intercepted',
-        subtitle: '10:24 AM',
-        icon: 'shield-lock',
-        status: 'blocked',
-        timestamp: 'Today',
-        source: 'Kernel Shield',
-    },
-    {
-        id: '2',
-        title: 'Unauthorized Haptic Request',
-        subtitle: '09:15 AM',
-        icon: 'vibrate',
-        status: 'snoozed',
-        timestamp: 'Today',
-        source: 'Browser',
-    },
-    {
-        id: '3',
-        title: 'Microphone Access Denied',
-        subtitle: '08:02 AM',
-        icon: 'microphone-off',
-        status: 'blocked',
-        timestamp: 'Today',
-        source: 'Social App',
-    },
-    {
-        id: '4',
-        title: 'GPS Ping Throttled',
-        subtitle: '11:58 PM',
-        icon: 'map-marker-off',
-        status: 'snoozed',
-        timestamp: 'Yesterday',
-        source: 'Maps Service',
-    },
-    {
-        id: '5',
-        title: 'Tracking Domain Blocked',
-        subtitle: '10:30 PM',
-        icon: 'dns',
-        status: 'blocked',
-        timestamp: 'Yesterday',
-        source: 'AdGuard',
-    },
-];
+interface Category {
+    id: string;
+    label: string;
+    icon: CategoryIcon;
+    color: string;
+    bgColor: string;
+    count: number;
+}
 
-const TABS: { key: TabFilter; label: string }[] = [
-    { key: 'all', label: 'All Activities' },
-    { key: 'blocked', label: 'Blocked' },
-    { key: 'snoozed', label: 'Snoozed' },
+const CATEGORIES: Category[] = [
+    { id: 'scam', label: 'Scam & Phishing', icon: 'shield-alert', color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.1)', count: 42 },
+    { id: 'promos', label: 'Promos & Coupons', icon: 'tag-multiple', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)', count: 128 },
+    { id: 'otp', label: 'OTP & Auth', icon: 'key-variant', color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)', count: 56 },
+    { id: 'bank', label: 'Banking & Bills', icon: 'bank', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)', count: 24 },
+    { id: 'delivery', label: 'Deliveries', icon: 'truck-delivery', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)', count: 18 },
+    { id: 'health', label: 'Health & Medical', icon: 'heart-pulse', color: '#f43f5e', bgColor: 'rgba(244, 63, 94, 0.1)', count: 7 },
+    { id: 'work', label: 'Work & Teams', icon: 'briefcase', color: '#0ea5e9', bgColor: 'rgba(14, 165, 233, 0.1)', count: 35 },
+    { id: 'others', label: 'Others', icon: 'dots-grid', color: '#94a3b8', bgColor: 'rgba(148, 163, 184, 0.1)', count: 89 },
 ];
 
 export default function ActivityScreen() {
     const insets = useSafeAreaInsets();
-    const [activeTab, setActiveTab] = useState<TabFilter>('all');
-
-    const filteredActivities =
-        activeTab === 'all'
-            ? ACTIVITIES
-            : ACTIVITIES.filter((a) => a.status === activeTab);
-
-    // Group by timestamp
-    const grouped = filteredActivities.reduce<Record<string, ActivityItem[]>>((acc, item) => {
-        if (!acc[item.timestamp]) acc[item.timestamp] = [];
-        acc[item.timestamp].push(item);
-        return acc;
-    }, {});
 
     return (
         <View style={[styles.screen, { paddingTop: insets.top }]}>
-            {/* Header */}
-            <View style={styles.headerArea}>
-                <ScreenHeader
-                    title="Activity Vault"
-                    rightIcon="magnify"
-                />
+            <ScreenHeader title="Categories" rightIcon="magnify" onRightPress={() => { }} />
 
-                {/* Tabs */}
-                <View style={styles.tabs}>
-                    {TABS.map((tab) => (
-                        <Pressable
-                            key={tab.key}
-                            onPress={() => setActiveTab(tab.key)}
-                            style={[
-                                styles.tab,
-                                activeTab === tab.key && styles.tabActive,
-                            ]}
-                        >
-                            <Text
-                                style={[
-                                    styles.tabText,
-                                    activeTab === tab.key && styles.tabTextActive,
-                                ]}
-                            >
-                                {tab.label}
-                            </Text>
-                        </Pressable>
-                    ))}
-                </View>
-            </View>
-
-            {/* Activity list */}
             <ScrollView
                 contentContainerStyle={styles.content}
                 showsVerticalScrollIndicator={false}
             >
-                {Object.entries(grouped).map(([timestamp, items]) => (
-                    <View key={timestamp} style={styles.section}>
-                        <Text style={styles.sectionTitle}>{timestamp}</Text>
-                        <View style={styles.itemsContainer}>
-                            {items.map((item) => (
-                                <Pressable
-                                    key={item.id}
-                                    style={({ pressed }) => [
-                                        styles.activityCard,
-                                        pressed && styles.activityCardPressed,
-                                    ]}
-                                >
-                                    <View style={styles.activityLeft}>
-                                        <View style={styles.activityIcon}>
-                                            <MaterialCommunityIcons
-                                                name={item.icon as any}
-                                                size={20}
-                                                color={Colors.primary}
-                                            />
-                                        </View>
-                                        <View style={styles.activityContent}>
-                                            <Text style={styles.activityTitle}>{item.title}</Text>
-                                            <Text style={styles.activitySubtitle}>
-                                                {item.subtitle} • {item.source}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    <StatusBadge status={item.status} />
-                                </Pressable>
-                            ))}
-                        </View>
-                    </View>
-                ))}
+                <Text style={styles.subtitle}>
+                    AI automatically categorizes your incoming messages.
+                </Text>
+
+                <View style={styles.gridContainer}>
+                    {CATEGORIES.map((cat) => (
+                        <Pressable
+                            key={cat.id}
+                            style={({ pressed }) => [
+                                styles.card,
+                                pressed && styles.cardPressed,
+                            ]}
+                        >
+                            <View style={[styles.iconWrapper, { backgroundColor: cat.bgColor }]}>
+                                <MaterialCommunityIcons name={cat.icon} size={28} color={cat.color} />
+                            </View>
+                            <View style={styles.textContainer}>
+                                <Text style={styles.cardLabel}>{cat.label}</Text>
+                                <Text style={styles.cardCount}>{cat.count} messages</Text>
+                            </View>
+                        </Pressable>
+                    ))}
+                </View>
 
                 <View style={{ height: 120 }} />
             </ScrollView>
@@ -172,94 +84,57 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: Colors.backgroundDark,
     },
-    headerArea: {
-        backgroundColor: Colors.backgroundDark,
-    },
-    tabs: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 32,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.primaryBorder,
-        paddingHorizontal: Spacing['2xl'],
-    },
-    tab: {
-        paddingBottom: 12,
-        borderBottomWidth: 2,
-        borderBottomColor: 'transparent',
-    },
-    tabActive: {
-        borderBottomColor: Colors.primary,
-    },
-    tabText: {
-        color: Colors.textMuted,
-        fontSize: FontSize.base,
-        fontWeight: '500',
-        fontFamily: 'Inter',
-    },
-    tabTextActive: {
-        color: Colors.primary,
-    },
     content: {
         paddingHorizontal: Spacing['2xl'],
-        paddingTop: Spacing['2xl'],
+        paddingTop: Spacing.md,
     },
-    section: {
-        marginBottom: 32,
-    },
-    sectionTitle: {
+    subtitle: {
         color: Colors.textMuted,
-        fontSize: FontSize.xs,
-        fontWeight: '700',
-        letterSpacing: 2,
-        textTransform: 'uppercase',
-        marginBottom: 16,
-        opacity: 0.7,
+        fontSize: FontSize.sm,
         fontFamily: 'Inter',
+        marginBottom: 24,
+        lineHeight: 20,
     },
-    itemsContainer: {
-        gap: 12,
-    },
-    activityCard: {
+    gridContainer: {
         flexDirection: 'row',
-        alignItems: 'center',
+        flexWrap: 'wrap',
         justifyContent: 'space-between',
-        padding: 16,
-        borderRadius: BorderRadius.xl,
-        backgroundColor: Colors.glassCardBg,
-        borderWidth: 1,
-        borderColor: Colors.glassCardBorder,
-    },
-    activityCardPressed: {
-        backgroundColor: Colors.primaryLight,
-    },
-    activityLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
         gap: 16,
-        flex: 1,
     },
-    activityIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: BorderRadius.lg,
+    card: {
+        width: '47%',
+        backgroundColor: Colors.surfaceDark,
+        borderRadius: BorderRadius.xl,
+        borderWidth: 1,
+        borderColor: Colors.borderDark,
+        padding: 20,
+        gap: 16,
+        alignItems: 'flex-start',
+    },
+    cardPressed: {
         backgroundColor: Colors.primaryLight,
+        borderColor: Colors.primaryBorder,
+        transform: [{ scale: 0.98 }],
+    },
+    iconWrapper: {
+        width: 52,
+        height: 52,
+        borderRadius: BorderRadius.xl,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    activityContent: {
-        flex: 1,
+    textContainer: {
+        gap: 4,
     },
-    activityTitle: {
+    cardLabel: {
         color: Colors.textPrimary,
-        fontSize: FontSize.lg,
-        fontWeight: '500',
+        fontSize: FontSize.base,
+        fontWeight: '600',
         fontFamily: 'Inter',
     },
-    activitySubtitle: {
+    cardCount: {
         color: Colors.textMuted,
-        fontSize: FontSize.sm,
-        marginTop: 4,
+        fontSize: FontSize.xs,
         fontFamily: 'Inter',
     },
 });

@@ -6,6 +6,7 @@ import { Colors, FontSize } from '@/constants/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,18 +16,19 @@ interface TabConfig {
   name: string;
   icon: TabIcon;
   iconFilled: TabIcon;
-  label: string;
 }
 
 const TABS: TabConfig[] = [
-  { name: 'index', icon: 'home-outline', iconFilled: 'home', label: 'Home' },
-  { name: 'security', icon: 'shield-outline', iconFilled: 'shield-check', label: 'Security' },
-  { name: 'activity', icon: 'chart-timeline-variant', iconFilled: 'chart-timeline-variant-shimmer', label: 'Activity' },
-  { name: 'settings', icon: 'cog-outline', iconFilled: 'cog', label: 'Settings' },
+  { name: 'index', icon: 'home-outline', iconFilled: 'home' },
+  { name: 'blocklist', icon: 'shield-outline', iconFilled: 'shield-check' },
+  { name: 'silenced', icon: 'volume-off', iconFilled: 'volume-off' },
+  { name: 'activity', icon: 'view-grid-outline', iconFilled: 'view-grid' },
+  { name: 'settings', icon: 'cog-outline', iconFilled: 'cog' },
 ];
 
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
@@ -35,6 +37,8 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           const isFocused = state.index === index;
           const tab = TABS[index];
           if (!tab) return null;
+
+          const tabNameKey = tab.name === 'index' ? 'home' : tab.name;
 
           return (
             <Pressable
@@ -62,7 +66,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                   { color: isFocused ? Colors.primary : Colors.textMuted },
                 ]}
               >
-                {tab.label}
+                {t(`tabs.${tabNameKey}`)}
               </Text>
             </Pressable>
           );

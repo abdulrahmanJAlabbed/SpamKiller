@@ -18,8 +18,8 @@ const UPGRADE_CONFIGS: Record<UpgradeVariant, UpgradeConfig> = {
         icon: 'star-circle',
         features: [
             'Unlimited Custom Keywords',
-            'Advanced Pattern Matching',
-            'Priority Rule Processing',
+            'Instant Threat Blocking',
+            'Ad-Free Experience',
         ],
         ctaText: 'Upgrade Now',
     },
@@ -31,8 +31,8 @@ const UPGRADE_CONFIGS: Record<UpgradeVariant, UpgradeConfig> = {
         icon: 'shield-check',
         features: [
             'Full Neural Auto-detection',
-            'Unlimited Keyword Filtering',
-            'Priority Cloud Processing',
+            'Zero-day Spam Protection',
+            'Privacy-Preserving Local ML',
         ],
         ctaText: 'Activate Neural Protection',
     },

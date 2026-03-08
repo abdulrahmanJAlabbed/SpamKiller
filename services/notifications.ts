@@ -1,6 +1,7 @@
 /**
  * FCM / Push Notification Service
  * Uses expo-notifications with hooks for Firebase Cloud Messaging.
+ * Includes separate channels for security alerts and silenced spam.
  */
 
 import * as Notifications from 'expo-notifications';
@@ -8,18 +9,34 @@ import { Platform } from 'react-native';
 
 // Configure how notifications are presented when app is in foreground
 Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-        shouldShowBanner: true,
-        shouldShowList: true,
-    }),
+    handleNotification: async (notification) => {
+        const channelId = notification.request.content.data?.channelId as string | undefined;
+
+        // If it's a silenced spam notification, don't show alert or play sound
+        if (channelId === 'spam-silenced') {
+            return {
+                shouldShowAlert: false,
+                shouldPlaySound: false,
+                shouldSetBadge: true,
+                shouldShowBanner: false,
+                shouldShowList: true,
+            };
+        }
+
+        // Default: show everything
+        return {
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: true,
+            shouldShowBanner: true,
+            shouldShowList: true,
+        };
+    },
 });
 
 /**
  * Request notification permissions and get the push token.
- * Returns the Expo push token string or null if permissions denied.
+ * Also sets up Android notification channels.
  */
 export async function registerForPushNotifications(): Promise<string | null> {
     try {
@@ -36,13 +53,25 @@ export async function registerForPushNotifications(): Promise<string | null> {
             return null;
         }
 
-        // For Android, set up the notification channel
+        // Android notification channels
         if (Platform.OS === 'android') {
+            // Main alerts channel — full sound/vibration
             await Notifications.setNotificationChannelAsync('default', {
                 name: 'Shield OS Alerts',
                 importance: Notifications.AndroidImportance.HIGH,
                 vibrationPattern: [0, 250, 250, 250],
                 lightColor: '#935af6',
+            });
+
+            // Spam silenced channel — NO sound, NO vibration
+            await Notifications.setNotificationChannelAsync('spam-silenced', {
+                name: 'Silenced Spam',
+                description: 'Spam messages that were auto-silenced',
+                importance: Notifications.AndroidImportance.LOW,
+                vibrationPattern: [0],
+                enableVibrate: false,
+                sound: undefined, // no sound
+                lightColor: '#ef4444',
             });
         }
 
@@ -56,8 +85,39 @@ export async function registerForPushNotifications(): Promise<string | null> {
 }
 
 /**
- * Set up listeners for incoming notifications (foreground + tap responses).
- * Returns a cleanup function to remove the listeners.
+ * Fire a silent notification for a spam message (Android).
+ * Shows in the notification shade but no sound/vibration.
+ */
+export async function notifySpamSilenced(sender: string, preview: string): Promise<void> {
+    await Notifications.scheduleNotificationAsync({
+        content: {
+            title: '🛡️ Spam Silenced',
+            body: `${sender}: ${preview.substring(0, 80)}${preview.length > 80 ? '...' : ''}`,
+            data: { channelId: 'spam-silenced', type: 'spam-silenced' },
+            sound: false,
+            priority: Notifications.AndroidNotificationPriority.LOW,
+        },
+        trigger: null, // fire immediately
+    });
+}
+
+/**
+ * Fire a regular alert notification.
+ */
+export async function notifyAlert(title: string, body: string, data?: Record<string, any>): Promise<void> {
+    await Notifications.scheduleNotificationAsync({
+        content: {
+            title,
+            body,
+            data: { channelId: 'default', ...data },
+            sound: true,
+        },
+        trigger: null,
+    });
+}
+
+/**
+ * Set up listeners for incoming notifications.
  */
 export function setupNotificationListeners(
     onNotificationReceived?: (notification: Notifications.Notification) => void,
@@ -82,19 +142,3 @@ export function setupNotificationListeners(
         responseSubscription.remove();
     };
 }
-
-/**
- * TODO: Firebase Cloud Messaging integration
- * When using a native build with @react-native-firebase/messaging:
- *
- * import messaging from '@react-native-firebase/messaging';
- *
- * export async function getFCMToken() {
- *   const token = await messaging().getToken();
- *   return token;
- * }
- *
- * export function onFCMMessage(handler: (message: any) => void) {
- *   return messaging().onMessage(handler);
- * }
- */

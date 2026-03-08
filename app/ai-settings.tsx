@@ -3,13 +3,13 @@
  */
 
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { CustomSlider } from '@/components/ui/CustomSlider';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { BorderRadius, Colors, FontSize, Spacing } from '@/constants/theme';
+import { useSpamFilter } from '@/contexts/SpamFilterContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import {
     ScrollView,
     StyleSheet,
@@ -34,14 +34,12 @@ function getAggressivenessLabel(val: number): string {
 
 export default function AISettingsScreen() {
     const insets = useSafeAreaInsets();
-    const [aiEnabled, setAiEnabled] = useState(true);
-    const [aggressiveness, setAggressiveness] = useState(50);
-    const [keywordWeighting, setKeywordWeighting] = useState(75);
+    const { aiEnabled, setAiEnabled } = useSpamFilter();
 
     return (
         <View style={[styles.screen, { paddingTop: insets.top }]}>
             <ScreenHeader
-                title="AI Spam Detector"
+                title="AI Threat Detection"
                 showBack
                 onBack={() => router.back()}
             />
@@ -58,71 +56,45 @@ export default function AISettingsScreen() {
                             <MaterialCommunityIcons
                                 name="shield-lock"
                                 size={48}
-                                color={Colors.primary}
+                                color={aiEnabled ? Colors.primary : Colors.textMuted}
                             />
                         </View>
                     </View>
                     <Text style={styles.heroTitle}>Neural Protection</Text>
                     <Text style={styles.heroDescription}>
-                        Shield OS uses local neural networks to identify spam patterns.
-                        Your communication data never leaves this device.
+                        Shield OS uses local neural networks to automatically identify and block new spam patterns. Your communication data never leaves this device.
                     </Text>
                 </View>
 
                 {/* Main Toggle */}
-                <GlassCard variant="solid" style={styles.toggleCard}>
+                <GlassCard variant="solid" style={StyleSheet.flatten([styles.toggleCard, aiEnabled && styles.toggleCardActive])}>
                     <View style={styles.toggleRow}>
                         <View style={styles.toggleContent}>
-                            <Text style={styles.toggleLabel}>Enable Auto AI Detection</Text>
+                            <Text style={styles.toggleLabel}>Auto AI Defense</Text>
                             <Text style={styles.toggleDescription}>
-                                Real-time filtering for calls and SMS.
+                                {aiEnabled ? 'Real-time filtering is actively protecting you.' : 'Protection is currently paused.'}
                             </Text>
                         </View>
                         <ToggleSwitch value={aiEnabled} onValueChange={setAiEnabled} />
                     </View>
                 </GlassCard>
 
-                {/* Advanced Controls */}
-                <View style={styles.controlsSection}>
-                    <Text style={styles.controlsTitle}>ADVANCED CONTROLS</Text>
-
-                    <View style={styles.slidersContainer}>
-                        <CustomSlider
-                            value={aggressiveness}
-                            onValueChange={setAggressiveness}
-                            label="Detection Aggressiveness"
-                            description="Higher levels may block more legitimate contacts."
-                            displayValue={getAggressivenessLabel(aggressiveness)}
-                        />
-
-                        <View style={styles.sliderDivider} />
-
-                        <CustomSlider
-                            value={keywordWeighting}
-                            onValueChange={setKeywordWeighting}
-                            label="Keyword Weighting"
-                            description="Sensitivity to common spam trigger phrases."
-                            displayValue={`${keywordWeighting}%`}
-                        />
-                    </View>
-                </View>
-
                 {/* Info Cards */}
                 <View style={styles.infoCards}>
-                    <View style={styles.infoCard}>
+                    <View style={[styles.infoCard, aiEnabled && styles.infoCardActive]}>
                         <MaterialCommunityIcons
                             name="head-cog"
                             size={22}
-                            color={Colors.primary}
+                            color={aiEnabled ? Colors.primary : Colors.textMuted}
                         />
                         <Text style={styles.infoLabel}>Local ML</Text>
                         <Text style={styles.infoValue}>v4.2 Engine</Text>
                     </View>
-                    <View style={styles.infoCard}>
+                    <View style={[styles.infoCard, aiEnabled && styles.infoCardActive]}>
                         <MaterialCommunityIcons
                             name="shield-check"
                             size={22}
-                            color={Colors.primary}
+                            color={aiEnabled ? Colors.primary : Colors.textMuted}
                         />
                         <Text style={styles.infoLabel}>Privacy First</Text>
                         <Text style={styles.infoValue}>Zero Cloud Logs</Text>
@@ -188,6 +160,15 @@ const styles = StyleSheet.create({
     // Toggle
     toggleCard: {
         marginBottom: 32,
+        padding: 16,
+        borderRadius: BorderRadius.xl,
+        backgroundColor: Colors.surfaceDark,
+        borderWidth: 1,
+        borderColor: Colors.borderDark,
+    },
+    toggleCardActive: {
+        borderColor: Colors.primaryBorder,
+        backgroundColor: 'rgba(147, 90, 246, 0.08)',
     },
     toggleRow: {
         flexDirection: 'row',
@@ -209,26 +190,7 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
         fontSize: FontSize.sm,
         fontFamily: 'Inter',
-    },
-    // Controls
-    controlsSection: {
-        marginBottom: 32,
-    },
-    controlsTitle: {
-        color: Colors.primary,
-        fontSize: FontSize.sm,
-        fontWeight: '700',
-        letterSpacing: 2,
-        marginBottom: 24,
-        fontFamily: 'Inter',
-    },
-    slidersContainer: {
-        gap: 24,
-    },
-    sliderDivider: {
-        height: 1,
-        backgroundColor: Colors.borderDark,
-        marginVertical: 8,
+        lineHeight: 20,
     },
     // Info Cards
     infoCards: {
@@ -240,9 +202,13 @@ const styles = StyleSheet.create({
         padding: 16,
         borderRadius: BorderRadius.xl,
         borderWidth: 1,
+        borderColor: Colors.borderDark,
+        backgroundColor: Colors.surfaceDark,
+        gap: 8,
+    },
+    infoCardActive: {
         borderColor: Colors.primaryBorder,
         backgroundColor: Colors.primaryLight,
-        gap: 8,
     },
     infoLabel: {
         color: Colors.textPrimary,

@@ -1,12 +1,12 @@
 /**
- * Security Screen — Manual Rules Engine with keyword blocklist
+ * Blocklist Screen — Manual Rules Engine with keyword blocklist
  */
 
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Tag } from '@/components/ui/Tag';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
-import type { BlockedKeyword } from '@/types';
+import { useSpamFilter } from '@/contexts/SpamFilterContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -23,19 +23,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const MAX_FREE_SLOTS = 7;
 
-const INITIAL_KEYWORDS: BlockedKeyword[] = [
-    { id: '1', text: 'spam' },
-    { id: '2', text: 'promo' },
-    { id: '3', text: 'crypto' },
-    { id: '4', text: 'winner' },
-    { id: '5', text: 'gift' },
-    { id: '6', text: 'click' },
-    { id: '7', text: 'verify' },
-];
-
-export default function SecurityScreen() {
+export default function BlocklistScreen() {
     const insets = useSafeAreaInsets();
-    const [keywords, setKeywords] = useState<BlockedKeyword[]>(INITIAL_KEYWORDS);
+    const { keywords, addKeyword, removeKeyword } = useSpamFilter();
     const [inputText, setInputText] = useState('');
 
     const slotsUsed = keywords.length;
@@ -46,29 +36,27 @@ export default function SecurityScreen() {
         if (!trimmed) return;
 
         if (slotsFull) {
-            // Navigate to upgrade
             router.push({ pathname: '/upgrade', params: { variant: 'filter' } });
             return;
         }
 
-        if (keywords.some((k) => k.text === trimmed)) {
+        const success = addKeyword(trimmed);
+        if (!success) {
             Alert.alert('Duplicate', 'This keyword is already in your blocklist.');
             return;
         }
 
-        setKeywords((prev) => [...prev, { id: Date.now().toString(), text: trimmed }]);
         setInputText('');
-    }, [inputText, slotsFull, keywords]);
+    }, [inputText, slotsFull, addKeyword]);
 
     const handleRemoveKeyword = useCallback((id: string) => {
-        setKeywords((prev) => prev.filter((k) => k.id !== id));
-    }, []);
+        removeKeyword(id);
+    }, [removeKeyword]);
 
     return (
         <View style={[styles.screen, { paddingTop: insets.top }]}>
             <ScreenHeader
-                title="Manual Rules Engine"
-                rightIcon="dots-vertical"
+                title="Blocklist"
             />
 
             <ScrollView
