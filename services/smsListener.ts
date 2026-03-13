@@ -180,7 +180,7 @@ async function handleIncomingSms(
 ): Promise<void> {
     // 1. Check if sender is in silenced numbers list
     try {
-        const storedSilenced = await AsyncStorage.getItem('@spamkiller_silenced_numbers');
+        const storedSilenced = await AsyncStorage.getItem(SILENCED_NUMBERS_KEY);
         const silencedList: string[] = storedSilenced ? JSON.parse(storedSilenced) : [];
         if (silencedList.includes(sender)) {
             console.log(`[SpamKiller] BLOCKED: Message from silenced number [${sender}]`);
@@ -237,7 +237,8 @@ async function handleIncomingSms(
 
 // ─── Persistent Storage ──────────────────────────────────────────
 
-const SILENCED_STORAGE_KEY = '@spamkiller_silenced';
+export const SILENCED_STORAGE_KEY = '@spamkiller_silenced';
+export const SILENCED_NUMBERS_KEY = '@spamkiller_silenced_numbers';
 const MAX_STORED = 100;
 
 async function storeSilencedMessage(msg: SilencedMessage): Promise<void> {

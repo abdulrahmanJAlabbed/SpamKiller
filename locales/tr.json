@@ -91,8 +91,15 @@
     "filterFeat1": "Unlimited Custom Keywords",
     "filterFeat2": "Instant Threat Blocking",
     "filterFeat3": "Ad-Free Experience",
-    "filterCta": "Upgrade Now",
-    "aiTitle": "Neural Shield",
+    "filterCta": "Korumayı Başlat",
+    "numbersTitle": "Genişletilmiş Erişim",
+    "numbersSubtitle": "Daha Fazla Numara ve Filtre",
+    "numbersDesc": "Sınırsız telefon numarasını engelleme ve karmaşık özel kelime filtreleri oluşturma özelliğini şu fiyata açın:",
+    "numbersCta": "Aegis'i Genişlet",
+    "numbersFeat1": "Sınırsız Sessiz Numara",
+    "numbersFeat2": "Özel Regex Filtreleri",
+    "numbersFeat3": "Öncelikli Destek",
+    "aiTitle": "Neural Shield Pro",
     "aiSubtitle": "Ultimate Protection",
     "aiDesc": "Enable full AI auto-detection and unlimited keywords for",
     "aiFeat1": "Full Neural Auto-detection",
@@ -118,6 +125,14 @@
     "supportUs": "BİZİ DESTEKLE",
     "enjoying": "Aegis'i beğendiniz mi?",
     "buyCoffee": "Bize bir kahve ısmarla ☕",
-    "usePasscode": "Parolayı kullan"
+    "usePasscode": "Parolayı kullan",
+    "notificationAccess": "Bildirim Erişimi",
+    "suppressionActive": "Engelleme Aktif",
+    "suppressionInactive": "Engelleme Devre Dışı",
+    "suppressDesc": "Aegis'in diğer uygulamalardan gelen spam bildirimlerini yakalaması ve engellemesi için özel izne ihtiyacı var.",
+    "enableSuppression": "Engellemeyi Etkinleştir",
+    "iosMessageFiltering": "MESAJ FİLTRELEME",
+    "iosFilterDesc": "Aegis, spam SMS'leri doğrudan 'Gereksiz' klasörünüze filtreleyebilir. Bunu Sistem Ayarları'ndan etkinleştirmeniz gerekir.",
+    "iosEnableFilter": "Filtre Ayarlarını Aç"
   }
 }

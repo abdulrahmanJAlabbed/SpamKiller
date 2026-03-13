@@ -1,142 +1,177 @@
 /**
- * AI Spam Detector Settings — Neural protection hero, detection controls, info cards
+ * AI Spam Detector Settings — Neural Sanctum Overhaul
  */
 
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { BackgroundTexture } from '@/components/layout/BackgroundTexture';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
+import { NeuralCore } from '@/components/ui/NeuralCore';
 import { BorderRadius, Colors, FontSize, Spacing } from '@/constants/theme';
 import { useSpamFilter } from '@/contexts/SpamFilterContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    Animated,
-    Easing,
     ScrollView,
     StyleSheet,
     Text,
     View,
+    Pressable,
+    ActivityIndicator,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const AGGRESSIVENESS_LABELS: Record<number, string> = {
-    25: 'Relaxed',
-    50: 'Balanced',
-    75: 'Aggressive',
-    100: 'Maximum',
-};
-
-function getAggressivenessLabel(val: number): string {
-    if (val <= 25) return 'Relaxed';
-    if (val <= 50) return 'Balanced';
-    if (val <= 75) return 'Aggressive';
-    return 'Maximum';
-}
-
 export default function AISettingsScreen() {
     const insets = useSafeAreaInsets();
-    const { t, i18n } = useTranslation();
-    const { aiEnabled, setAiEnabled } = useSpamFilter();
+    const { t } = useTranslation();
+    const { 
+        aiEnabled, 
+        setAiEnabled, 
+        isPremium, 
+        setPremium, 
+        restorePurchase 
+    } = useSpamFilter();
 
-    // Pulse animation for the hero icon
-    const pulseAnim = React.useRef(new Animated.Value(1)).current;
-
-    React.useEffect(() => {
-        // Animation removed per user request for a more stable UI
-        pulseAnim.setValue(1);
-    }, [aiEnabled, pulseAnim]);
+    const [isRestoring, setIsRestoring] = useState(false);
 
     const handleToggle = (value: boolean) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setAiEnabled(value);
     };
 
+    const handleRestore = async () => {
+        setIsRestoring(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await restorePurchase();
+        setIsRestoring(false);
+    };
+
+    const handlePurchase = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        router.push('/upgrade');
+    };
+
     return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
+        <View style={styles.screen}>
             <BackgroundTexture />
-            <ScreenHeader
-                title={t('aiSettings.title')}
-                showBack
-                onBack={() => router.back()}
-            />
+            <View style={{ paddingTop: insets.top }}>
+                <ScreenHeader
+                    title={t('aiSettings.title')}
+                    showBack
+                    onBack={() => router.back()}
+                />
+            </View>
 
             <ScrollView
-                contentContainerStyle={styles.content}
+                contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Hero Section */}
+                {/* Hero Visualization */}
                 <View style={styles.heroSection}>
                     <View style={styles.premiumBadge}>
-                        <MaterialCommunityIcons name="star-four-points" size={14} color="#f59e0b" />
-                        <Text style={styles.premiumBadgeText}>AEGIS TIER-1 ACCESS</Text>
+                        <MaterialCommunityIcons name="shield-crown-outline" size={14} color="#f59e0b" />
+                        <Text style={styles.premiumBadgeText}>
+                            {isPremium ? 'ACCESS GRANTED' : 'RESTRICTED SECTOR'}
+                        </Text>
                     </View>
-                    <View style={styles.heroIconWrapper}>
-                        <Animated.View 
-                            style={[
-                                styles.heroGlow, 
-                                { 
-                                    opacity: aiEnabled ? 0.3 : 0.05,
-                                    transform: [{ scale: pulseAnim }]
-                                }
-                            ]} 
-                        />
-                        <View style={[styles.heroIconContainer, !aiEnabled && styles.heroIconContainerDisabled]}>
-                            <MaterialCommunityIcons
-                                name="creation"
-                                size={56}
-                                color={aiEnabled ? Colors.primary : Colors.textMuted}
-                            />
-                        </View>
-                        <View style={styles.statusDotWrapper}>
-                           <View style={[styles.statusDot, { backgroundColor: aiEnabled ? Colors.primary : Colors.textMuted }]} />
+                    
+                    <NeuralCore active={aiEnabled} />
+
+                    <View style={styles.heroInfo}>
+                        <Text style={styles.heroTitle}>{t('aiSettings.heroTitle')}</Text>
+                        <View style={[styles.statusBadge, { borderColor: aiEnabled ? Colors.primary : Colors.borderDark }]}>
+                            <View style={[styles.statusDot, { backgroundColor: aiEnabled ? Colors.primary : Colors.textMuted }]} />
+                            <Text style={[styles.statusText, { color: aiEnabled ? Colors.primary : Colors.textMuted }]}>
+                                {aiEnabled ? t('aiSettings.fluxActive') : t('aiSettings.standby')}
+                            </Text>
                         </View>
                     </View>
-                    <Text style={styles.heroTitle}>Neural Silence Engine</Text>
-                    <Text style={styles.heroDescription}>
-                        Deep semantic analysis of incoming traffic. On-device intelligence neutralizes deceptive intent with elite-grade accuracy.
-                    </Text>
                 </View>
 
-                {/* Main Toggle */}
-                <GlassCard variant="solid" style={StyleSheet.flatten([styles.toggleCard, aiEnabled && styles.toggleCardActive])}>
+                {/* Main Toggle Card */}
+                <GlassCard variant={aiEnabled ? "primary" : "solid"} style={styles.mainToggleCard}>
                     <View style={styles.toggleRow}>
-                        <View style={styles.toggleContent}>
-                            <Text style={styles.toggleLabel}>Auto AI Defense</Text>
-                            <Text style={styles.toggleDescription}>
-                                {aiEnabled ? 'Deep packet inspection is active.' : 'Neural engine is on standby.'}
+                        <View style={styles.toggleText}>
+                            <Text style={styles.toggleLabel}>{t('aiSettings.autoAiDefense')}</Text>
+                            <Text style={styles.toggleDesc}>
+                                {aiEnabled ? t('aiSettings.realTimeActive') : t('aiSettings.protectionPaused')}
                             </Text>
                         </View>
                         <ToggleSwitch value={aiEnabled} onValueChange={handleToggle} />
                     </View>
                 </GlassCard>
 
-                {/* Info Cards */}
-                <View style={styles.infoCards}>
-                    <View style={[styles.infoCard, aiEnabled && styles.infoCardActive]}>
-                        <MaterialCommunityIcons
-                            name="head-cog"
-                            size={22}
-                            color={aiEnabled ? Colors.primary : Colors.textMuted}
-                        />
-                        <Text style={styles.infoLabel}>Local ML</Text>
-                        <Text style={styles.infoValue}>v4.2 Engine</Text>
+                {/* Metrics Grid */}
+                <View style={styles.metricsGrid}>
+                    <View style={styles.metricCard}>
+                        <View style={styles.metricHeader}>
+                            <Text style={styles.metricTitle}>{t('aiSettings.neuralLoad')}</Text>
+                            <MaterialCommunityIcons name="chart-bell-curve-cumulative" size={16} color={Colors.textMuted} />
+                        </View>
+                        <Text style={styles.metricValue}>0.04<Text style={styles.metricUnit}>ms</Text></Text>
+                        <View style={styles.progressBarBg}>
+                            <View style={[styles.progressBarFill, { width: '15%', backgroundColor: Colors.primary }]} />
+                        </View>
                     </View>
-                    <View style={[styles.infoCard, aiEnabled && styles.infoCardActive]}>
-                        <MaterialCommunityIcons
-                            name="shield-check"
-                            size={22}
-                            color={aiEnabled ? Colors.primary : Colors.textMuted}
-                        />
-                        <Text style={styles.infoLabel}>Privacy First</Text>
-                        <Text style={styles.infoValue}>Zero Cloud Logs</Text>
+
+                    <View style={styles.metricCard}>
+                        <View style={styles.metricHeader}>
+                            <Text style={styles.metricTitle}>{t('aiSettings.semanticIntegrity')}</Text>
+                            <MaterialCommunityIcons name="shield-key-outline" size={16} color={Colors.textMuted} />
+                        </View>
+                        <Text style={styles.metricValue}>99.9<Text style={styles.metricUnit}>%</Text></Text>
+                        <View style={styles.progressBarBg}>
+                            <View style={[styles.progressBarFill, { width: '99.9%', backgroundColor: Colors.successGreen }]} />
+                        </View>
                     </View>
                 </View>
 
-                <View style={{ height: 40 }} />
+                {/* Purchase/Restore Section */}
+                {!isPremium ? (
+                    <View style={styles.monetizationSection}>
+                        <Pressable 
+                            style={({ pressed }) => [styles.purchaseButton, pressed && styles.pressed]}
+                            onPress={handlePurchase}
+                        >
+                            <MaterialCommunityIcons name="lightning-bolt" size={20} color={Colors.backgroundDark} />
+                            <Text style={styles.purchaseButtonText}>{t('aiSettings.unlockPremium')}</Text>
+                        </Pressable>
+                        
+                        <Pressable 
+                            style={({ pressed }) => [styles.restoreButton, pressed && styles.pressed]}
+                            onPress={handleRestore}
+                            disabled={isRestoring}
+                        >
+                            {isRestoring ? (
+                                <ActivityIndicator size="small" color={Colors.textSecondary} />
+                            ) : (
+                                <>
+                                    <MaterialCommunityIcons name="refresh" size={18} color={Colors.textSecondary} />
+                                    <Text style={styles.restoreButtonText}>{t('aiSettings.restore')}</Text>
+                                </>
+                            )}
+                        </Pressable>
+                    </View>
+                ) : (
+                    <View style={styles.premiumStatus}>
+                        <MaterialCommunityIcons name="check-decagram" size={20} color={Colors.successGreen} />
+                        <Text style={styles.premiumStatusText}>{t('aiSettings.purchased')}</Text>
+                    </View>
+                )}
+
+                {/* Info Card */}
+                <GlassCard variant="solid" style={styles.infoCard}>
+                    <View style={styles.infoRow}>
+                        <MaterialCommunityIcons name="head-snowflake-outline" size={24} color={Colors.primary} />
+                        <View style={styles.infoText}>
+                            <Text style={styles.infoTitle}>{t('aiSettings.neuralProtection')}</Text>
+                            <Text style={styles.infoDesc}>{t('aiSettings.neuralDesc')}</Text>
+                        </View>
+                    </View>
+                </GlassCard>
             </ScrollView>
         </View>
     );
@@ -148,150 +183,200 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.backgroundDark,
     },
     content: {
-        paddingHorizontal: Spacing['2xl'],
-        paddingBottom: 40,
+        paddingHorizontal: Spacing.xl,
     },
-    // Hero
     heroSection: {
         alignItems: 'center',
-        paddingVertical: 16,
-        marginBottom: 24,
-    },
-    heroIconWrapper: {
-        position: 'relative',
-        marginBottom: 24,
-    },
-    heroGlow: {
-        position: 'absolute',
-        width: '100%',
-        height: '100%',
-        backgroundColor: Colors.primary,
-        borderRadius: 24,
-        opacity: 0.15,
-        transform: [{ scale: 1.4 }],
-    },
-    heroIconContainer: {
-        backgroundColor: Colors.surfaceDark,
-        padding: 32,
-        borderRadius: 48,
-        borderWidth: 1.5,
-        borderColor: Colors.primary,
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 20,
-        elevation: 10,
-    },
-    heroIconContainerDisabled: {
-        backgroundColor: Colors.surfaceDark,
-        borderColor: Colors.borderDark,
-        shadowOpacity: 0,
-    },
-    statusDotWrapper: {
-        position: 'absolute',
-        bottom: 4,
-        right: 4,
-        backgroundColor: Colors.backgroundDark,
-        padding: 4,
-        borderRadius: 10,
-    },
-    statusDot: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
+        paddingVertical: 32,
+        marginBottom: 8,
     },
     premiumBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: 'rgba(245, 158, 11, 0.3)',
-        marginBottom: 20,
+        borderColor: 'rgba(255, 255, 255, 0.08)',
+        marginBottom: 24,
         gap: 6,
     },
     premiumBadgeText: {
-        color: '#f59e0b',
+        color: Colors.textMuted,
         fontSize: 10,
         fontWeight: '900',
-        letterSpacing: 1,
+        letterSpacing: 2,
+    },
+    heroInfo: {
+        alignItems: 'center',
+        marginTop: 24,
     },
     heroTitle: {
         color: Colors.textPrimary,
-        fontSize: FontSize['2xl'],
+        fontSize: FontSize['4xl'],
         fontWeight: '900',
-        textTransform: 'uppercase',
-        letterSpacing: 2,
-        marginBottom: 12,
+        letterSpacing: -1,
+        marginBottom: 8,
     },
-    heroDescription: {
-        color: Colors.textSecondary,
-        fontSize: FontSize.base,
-        lineHeight: 22,
-        textAlign: 'center',
-        paddingHorizontal: 16,
-        fontWeight: '300',
-    },
-    // Toggle
-    toggleCard: {
-        marginBottom: 32,
-        padding: 16,
-        borderRadius: BorderRadius.xl,
-        backgroundColor: Colors.surfaceDark,
+    statusBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 20,
         borderWidth: 1,
-        borderColor: Colors.borderDark,
+        gap: 8,
     },
-    toggleCardActive: {
-        borderColor: Colors.primaryBorder,
-        backgroundColor: Colors.primaryLight,
+    statusDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+    },
+    statusText: {
+        fontSize: 10,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    mainToggleCard: {
+        padding: 20,
+        marginBottom: 16,
     },
     toggleRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 16,
     },
-    toggleContent: {
+    toggleText: {
         flex: 1,
-        gap: 4,
+        gap: 2,
     },
     toggleLabel: {
         color: Colors.textPrimary,
-        fontSize: FontSize.xl,
+        fontSize: FontSize.lg,
         fontWeight: '700',
     },
-    toggleDescription: {
+    toggleDesc: {
+        color: Colors.textSecondary,
+        fontSize: FontSize.xs,
+        opacity: 0.7,
+    },
+    metricsGrid: {
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: 24,
+    },
+    metricCard: {
+        flex: 1,
+        backgroundColor: Colors.surfaceDark,
+        borderRadius: BorderRadius.xl,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: Colors.borderDark,
+    },
+    metricHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    metricTitle: {
+        color: Colors.textMuted,
+        fontSize: 10,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+    },
+    metricValue: {
+        color: Colors.textPrimary,
+        fontSize: FontSize.xl,
+        fontWeight: '700',
+        marginBottom: 8,
+    },
+    metricUnit: {
+        fontSize: FontSize.xs,
+        color: Colors.textMuted,
+        fontWeight: '400',
+    },
+    progressBarBg: {
+        height: 2,
+        backgroundColor: Colors.borderDark,
+        borderRadius: 1,
+    },
+    progressBarFill: {
+        height: '100%',
+        borderRadius: 1,
+    },
+    monetizationSection: {
+        marginBottom: 24,
+        gap: 12,
+    },
+    purchaseButton: {
+        backgroundColor: Colors.primary,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        borderRadius: BorderRadius.xl,
+        gap: 8,
+    },
+    purchaseButtonText: {
+        color: Colors.backgroundDark,
+        fontSize: FontSize.base,
+        fontWeight: '700',
+    },
+    restoreButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        gap: 8,
+    },
+    restoreButtonText: {
         color: Colors.textSecondary,
         fontSize: FontSize.sm,
-        lineHeight: 20,
+        fontWeight: '600',
     },
-    // Info Cards
-    infoCards: {
+    premiumStatus: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        padding: 16,
+        backgroundColor: 'rgba(0, 255, 170, 0.05)',
+        borderRadius: BorderRadius.xl,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(0, 255, 170, 0.1)',
+    },
+    premiumStatusText: {
+        color: Colors.successGreen,
+        fontSize: FontSize.sm,
+        fontWeight: '600',
+    },
+    infoCard: {
+        padding: 20,
+    },
+    infoRow: {
         flexDirection: 'row',
         gap: 16,
     },
-    infoCard: {
+    infoText: {
         flex: 1,
-        padding: 16,
-        borderRadius: BorderRadius.xl,
-        borderWidth: 1,
-        borderColor: Colors.borderDark,
-        backgroundColor: Colors.surfaceDark,
-        gap: 8,
+        gap: 4,
     },
-    infoCardActive: {
-        borderColor: Colors.primaryBorder,
-        backgroundColor: Colors.primaryLight,
-    },
-    infoLabel: {
+    infoTitle: {
         color: Colors.textPrimary,
-        fontSize: FontSize.sm,
+        fontSize: FontSize.base,
         fontWeight: '700',
     },
-    infoValue: {
-        color: Colors.textMuted,
-        fontSize: FontSize['2xs'],
+    infoDesc: {
+        color: Colors.textSecondary,
+        fontSize: FontSize.xs,
+        lineHeight: 18,
+    },
+    pressed: {
+        opacity: 0.8,
+        transform: [{ scale: 0.98 }],
     },
 });

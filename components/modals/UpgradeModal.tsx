@@ -8,7 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, ActivityIndicator, Animated } from 'react-native';
 
 interface UpgradeModalProps {
     variant: UpgradeVariant;
@@ -44,9 +44,37 @@ export function UpgradeModal({ variant }: UpgradeModalProps) {
             ],
             ctaText: t('upgrade.aiCta'),
         },
+        numbers: {
+            title: t('upgrade.numbersTitle'),
+            subtitle: t('upgrade.numbersSubtitle'),
+            description: t('upgrade.numbersDesc'),
+            price: '$7',
+            icon: 'plus-network',
+            features: [
+                t('upgrade.numbersFeat1'),
+                t('upgrade.numbersFeat2'),
+                t('upgrade.numbersFeat3'),
+            ],
+            ctaText: t('upgrade.numbersCta'),
+        },
     };
 
+    const [isPurchasing, setIsPurchasing] = React.useState(false);
+    const [isSuccess, setIsSuccess] = React.useState(false);
     const config = UPGRADE_CONFIGS[variant];
+
+    const handlePurchase = () => {
+        setIsPurchasing(true);
+        // Simulate payment gateway delay
+        setTimeout(() => {
+            setIsPurchasing(false);
+            setIsSuccess(true);
+            // Auto close after success
+            setTimeout(() => {
+                router.back();
+            }, 2000);
+        }, 1500);
+    };
 
     return (
         <View style={styles.overlay}>
@@ -94,12 +122,24 @@ export function UpgradeModal({ variant }: UpgradeModalProps) {
 
                     {/* CTA */}
                     <Pressable
-                        style={({ pressed }) => [styles.ctaButton, pressed && styles.ctaPressed]}
-                        onPress={() => {
-                            // TODO: Integrate payment
-                        }}
+                        style={({ pressed }) => [
+                            styles.ctaButton, 
+                            pressed && styles.ctaPressed,
+                            isSuccess && styles.ctaSuccess
+                        ]}
+                        onPress={handlePurchase}
+                        disabled={isPurchasing || isSuccess}
                     >
-                        <Text style={styles.ctaText}>{config.ctaText}</Text>
+                        {isPurchasing ? (
+                            <ActivityIndicator color={Colors.white} />
+                        ) : isSuccess ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <MaterialCommunityIcons name="check-bold" size={20} color={Colors.white} />
+                                <Text style={styles.ctaText}>Access Granted</Text>
+                            </View>
+                        ) : (
+                            <Text style={styles.ctaText}>{config.ctaText}</Text>
+                        )}
                     </Pressable>
 
                     <Pressable
@@ -252,6 +292,9 @@ const styles = StyleSheet.create({
     ctaPressed: {
         opacity: 0.9,
         transform: [{ scale: 0.98 }],
+    },
+    ctaSuccess: {
+        backgroundColor: '#10b981',
     },
     ctaText: {
         color: Colors.white,

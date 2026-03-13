@@ -86,7 +86,11 @@ export async function registerForPushNotifications(): Promise<string | null> {
             console.log('Push token:', tokenData.data);
             return tokenData.data;
         } catch (tokenErr) {
-            console.warn('[Notifications] Expo Push Token skipped (likely Firebase not initialized):', tokenErr);
+            // Only log if it's a real error, not just the expected Firebase missing warning in dev
+            if (__DEV__ && String(tokenErr).includes('FirebaseApp is not initialized')) {
+                return null;
+            }
+            console.warn('[Notifications] Expo Push Token skipped:', tokenErr);
             return null;
         }
     } catch (error) {

@@ -21,6 +21,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import Animated, { FadeIn, FadeOut, Layout } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type CategoryIcon = keyof typeof MaterialCommunityIcons.glyphMap;
@@ -42,6 +43,15 @@ const CATEGORIES: Category[] = [
     { id: 'others', icon: 'dots-horizontal-circle-outline', color: '#94a3b8' },
 ];
 
+const getCategoryKey = (id: string) => {
+    const keyMap: Record<string, string> = {
+        'scam': 'catScam', 'promos': 'catPromos', 'otp': 'catOtp',
+        'bank': 'catBank', 'delivery': 'catDelivery', 'health': 'catHealth',
+        'work': 'catWork', 'others': 'catOthers'
+    };
+    return keyMap[id] || 'catOthers';
+};
+
 export default function ActivityScreen() {
     const insets = useSafeAreaInsets();
     const { t, i18n } = useTranslation();
@@ -50,11 +60,13 @@ export default function ActivityScreen() {
 
     const categoryCounts = React.useMemo(() => {
         const counts: Record<string, number> = {};
+        if (!Array.isArray(scanResults)) return counts;
+        
         scanResults.forEach(item => {
-            let catRaw = item.result.category || 'others';
-            let catId = (catRaw as string).toLowerCase();
+            if (!item?.result) return;
+            const catRaw = item.result.category || 'others';
+            let catId = String(catRaw).toLowerCase();
             
-            // Map 'catscam' -> 'scam', 'catpromos' -> 'promos' etc.
             if (catId.startsWith('cat')) {
                 catId = catId.substring(3);
             }
@@ -63,41 +75,36 @@ export default function ActivityScreen() {
         });
         return counts;
     }, [scanResults]);
+
     const [isSearching, setIsSearching] = React.useState(false);
     const [searchQuery, setSearchQuery] = React.useState('');
 
     const filteredCategories = React.useMemo(() => {
-        if (!searchQuery.trim()) return CATEGORIES;
+        if (!searchQuery?.trim()) return CATEGORIES;
         const q = searchQuery.toLowerCase();
-        return CATEGORIES.filter(cat => 
-            t(`activity.${getCategoryKey(cat.id)}`).toLowerCase().includes(q)
-        );
+        return CATEGORIES.filter(cat => {
+            const label = t(`activity.${getCategoryKey(cat.id)}`);
+            return typeof label === 'string' && label.toLowerCase().includes(q);
+        });
     }, [searchQuery, t]);
 
     const filteredMessages = React.useMemo(() => {
-        if (!searchQuery.trim()) return [];
+        if (!Array.isArray(scanResults) || !searchQuery?.trim()) return [];
         const q = searchQuery.toLowerCase();
-        return scanResults.filter(msg => 
-            (msg.sender?.toLowerCase().includes(q) || msg.text.toLowerCase().includes(q))
-        );
+        return scanResults.filter(msg => {
+            const sender = msg.sender?.toLowerCase() || '';
+            const text = msg.text?.toLowerCase() || '';
+            return sender.includes(q) || text.includes(q);
+        });
     }, [searchQuery, scanResults]);
 
-    const handleCategoryPress = (categoryId: string) => {
+    const handleCategoryPress = React.useCallback((categoryId: string) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push({
             pathname: '/category-feed',
             params: { categoryId }
         });
-    };
-
-    const getCategoryKey = (id: string) => {
-        const keyMap: Record<string, string> = {
-            'scam': 'catScam', 'promos': 'catPromos', 'otp': 'catOtp',
-            'bank': 'catBank', 'delivery': 'catDelivery', 'health': 'catHealth',
-            'work': 'catWork', 'others': 'catOthers'
-        };
-        return keyMap[id] || 'catOthers';
-    };
+    }, []);
 
     return (
         <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -105,14 +112,17 @@ export default function ActivityScreen() {
                 title={t('activity.title')}
                 rightIcon={isSearching ? "close" : "magnify"}
                 onRightPress={() => {
-                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                     setIsSearching(!isSearching);
                     if (isSearching) setSearchQuery('');
                 }}
             />
 
             {isSearching && (
-                <View style={styles.searchContainer}>
+                <Animated.View 
+                    entering={FadeIn.duration(200)} 
+                    exiting={FadeOut.duration(200)}
+                    style={styles.searchContainer}
+                >
                     <View style={[styles.searchInputWrapper, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                         <MaterialCommunityIcons name="magnify" size={20} color={Colors.textMuted} />
                         <TextInput
@@ -124,7 +134,7 @@ export default function ActivityScreen() {
                             autoFocus
                         />
                     </View>
-                </View>
+                </Animated.View>
             )}
 
             <ScrollView
@@ -181,7 +191,7 @@ export default function ActivityScreen() {
                             <Pressable 
                                 key={msg.id} 
                                 style={styles.messageCard}
-                                onPress={() => handleCategoryPress(msg.result.category || 'others')}
+                                onPress={() => handleCategoryPress(msg.result?.category || 'others')}
                             >
                                 <View style={styles.messageIcon}>
                                     <MaterialCommunityIcons name="shield-off" size={16} color="#ef4444" />

@@ -91,8 +91,15 @@
     "filterFeat1": "كلمات مفتاحية مخصصة غير محدودة",
     "filterFeat2": "حظر فوري للتهديدات",
     "filterFeat3": "تجربة بدون إعلانات",
-    "filterCta": "رَقِّ الآن",
-    "aiTitle": "درع الذكاء الاصطناعي",
+    "filterCta": "ابدأ الحماية",
+    "numbersTitle": "وصول ممتد",
+    "numbersSubtitle": "المزيد من الأرقام والفلاتر",
+    "numbersDesc": "افتح القدرة على حظر أرقام هواتف غير محدودة وإنشاء فلاتر كلمات مخصصة معقدة لـ",
+    "numbersCta": "توسيع Aegis",
+    "numbersFeat1": "أرقام صامتة غير محدودة",
+    "numbersFeat2": "فلاتر Regex مخصصة",
+    "numbersFeat3": "دعم الأولوية",
+    "aiTitle": "Neural Shield Pro",
     "aiSubtitle": "الحماية القصوى",
     "aiDesc": "تفعيل الكشف التلقائي بالذكاء الاصطناعي وكلمات غير محدودة مقابل",
     "aiFeat1": "كشف عصبي تلقائي كامل",
@@ -127,6 +134,9 @@
     "suppressDesc": "يحتاج Aegis إلى إذن لكتم إشعارات معينة من تطبيقات النظام.",
     "enableSuppression": "تفعيل الكتم",
     "suppressionActive": "تم تفعيل كتم الإشعارات",
-    "suppressionInactive": "الحالة: يتطلب الوصول"
+    "suppressionInactive": "الحالة: يتطلب الوصول",
+    "iosMessageFiltering": "تصفية الرسائل",
+    "iosFilterDesc": "يمكن لـ Aegis تصفية الرسائل المزعجة مباشرة في مجلد 'الرسائل غير المرغوب فيها'. يجب تفعيل هذا في إعدادات النظام.",
+    "iosEnableFilter": "فتح إعدادات التصفية"
   }
 }

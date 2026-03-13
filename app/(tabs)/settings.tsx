@@ -7,11 +7,9 @@ import { SettingsRow } from '@/components/ui/SettingsRow';
 import { BorderRadius, Colors, FontSize, Spacing } from '@/constants/theme';
 import type { LanguageOption } from '@/types';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as LocalAuthentication from 'expo-local-authentication';
-import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSpamFilter } from '@/contexts/SpamFilterContext';
 import {
     ActivityIndicator,
     Alert,
@@ -21,8 +19,17 @@ import {
     StyleSheet,
     Text,
     View,
+    NativeModules,
+    AppState,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SecurityCard } from '@/components/ui/SecurityCard';
+import { LanguageModal } from '@/components/ui/LanguageModal';
+import * as Haptics from 'expo-haptics';
+import { Linking } from 'react-native';
 
 const LANGUAGES: LanguageOption[] = [
     { code: 'en', name: 'English', flag: '🇺🇸' },
@@ -40,15 +47,49 @@ export default function SettingsScreen() {
     const insets = useSafeAreaInsets();
     const { t, i18n } = useTranslation();
     const isRTL = i18n.dir() === 'rtl';
+    const { resetAllData } = useSpamFilter();
 
     // Core states
     const [notifications, setNotifications] = useState(true);
     const [biometricAuth, setBiometricAuth] = useState(false);
     const [notificationAccess, setNotificationAccess] = useState(false);
 
+    const { PermissionModule } = NativeModules;
+    const isIOS = Platform.OS === 'ios';
+
+    /**
+     * checkNotificationAccess — Verifies if the app has the required 
+     * notification listener permissions on Android.
+     */
+    const checkNotificationAccess = async () => {
+        if (Platform.OS === 'android' && PermissionModule?.isNotificationListenerEnabled) {
+            try {
+                const isEnabled = await PermissionModule.isNotificationListenerEnabled();
+                setNotificationAccess(isEnabled);
+            } catch (err) {
+                console.error('Failed to check notification access:', err);
+            }
+        }
+    };
+
+    useEffect(() => {
+        checkNotificationAccess();
+
+        // Listen for app state changes to re-check when returning from settings
+        const subscription = AppState.addEventListener('change', (nextAppState) => {
+            if (nextAppState === 'active') {
+                checkNotificationAccess();
+            }
+        });
+
+        return () => {
+            subscription.remove();
+        };
+    }, []);
+
     // Language states
     const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || 'en');
-    const [languageDropdownOpen, setLanguageDropdownOpen] = useState(false);
+    const [languageModalVisible, setLanguageModalVisible] = useState(false);
 
     // Loading state for init
     const [isLoaded, setIsLoaded] = useState(false);
@@ -73,10 +114,15 @@ export default function SettingsScreen() {
         loadSettings();
     }, []);
 
+    /**
+     * handleSelectLanguage — Updates app-wide language, saves preference 
+     * to storage, and provides haptic feedback.
+     */
     const handleSelectLanguage = async (code: string) => {
         setSelectedLanguage(code);
-        setLanguageDropdownOpen(false);
-        i18n.changeLanguage(code); // Instantly switches active language across the app
+        setLanguageModalVisible(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        i18n.changeLanguage(code); 
         try {
             await AsyncStorage.setItem('@settings_language', code);
         } catch (err) {
@@ -84,6 +130,10 @@ export default function SettingsScreen() {
         }
     };
 
+    /**
+     * handleToggleBiometric — Manages biometric authentication state, 
+     * requiring verification before activation.
+     */
     const handleToggleBiometric = async (value: boolean) => {
         if (value) {
             // Check what forms of local authentication are available on this device
@@ -133,13 +183,33 @@ export default function SettingsScreen() {
     };
 
     const handleOpenNotificationAccess = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        const { Linking } = require('react-native');
         if (Platform.OS === 'android') {
-            const { Linking } = require('react-native');
-            // Intent to open Notification Access settings
             Linking.sendIntent('android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS');
         } else {
-            Alert.alert('Info', 'Notification suppression is managed by iOS system settings.');
+            Linking.openSettings();
         }
+    };
+
+    const handleClearData = () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert(
+            t('settings.confirmClearTitle'),
+            t('settings.confirmClearMsg'),
+            [
+                { text: t('settings.cancel'), style: 'cancel' },
+                { 
+                    text: t('settings.reset'), 
+                    style: 'destructive',
+                    onPress: async () => {
+                        await resetAllData();
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        Alert.alert(t('settings.clearSuccess'), t('settings.clearSuccessMsg'));
+                    }
+                }
+            ]
+        );
     };
 
     if (!isLoaded) {
@@ -166,100 +236,68 @@ export default function SettingsScreen() {
                 <View style={styles.section}>
                     <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings.securityAlerts')}</Text>
                     <View style={[styles.securityGrid, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                        {/* App Lock Card */}
-                        <Pressable
+                        <SecurityCard 
+                            icon={biometricAuth ? "fingerprint" : "fingerprint-off"}
+                            title={t('settings.appLock')}
+                            subtitle={biometricAuth ? t('settings.securedBiometrics') : t('settings.tapEnable')}
+                            isActive={biometricAuth}
                             onPress={() => handleToggleBiometric(!biometricAuth)}
-                            style={[
-                                styles.securityFeatureCard,
-                                biometricAuth && styles.securityFeatureCardActive
-                            ]}
-                        >
-                            <View style={[styles.securityTopRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                                <View style={[styles.securityFeatureIcon, biometricAuth && styles.securityFeatureIconActive]}>
-                                    <MaterialCommunityIcons
-                                        name={biometricAuth ? "fingerprint" : "fingerprint-off"}
-                                        size={28}
-                                        color={biometricAuth ? Colors.primary : Colors.textMuted}
-                                    />
-                                </View>
-                                <View style={[styles.securityStatusDot, biometricAuth && styles.securityStatusDotActive]} />
-                            </View>
-                            <View style={[styles.securityFeatureText, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
-                                <Text style={styles.securityFeatureTitle}>{t('settings.appLock')}</Text>
-                                <Text style={[styles.securityFeatureSubtitle, { textAlign: isRTL ? 'right' : 'left' }]}>
-                                    {biometricAuth ? t('settings.securedBiometrics') : t('settings.tapEnable')}
-                                </Text>
-                            </View>
-                        </Pressable>
+                            isRTL={isRTL}
+                        />
 
-                        {/* Notifications Card */}
-                        <Pressable
+                        <SecurityCard 
+                            icon={notifications ? "bell-ring" : "bell-off-outline"}
+                            title={t('settings.alerts')}
+                            subtitle={notifications ? t('settings.liveUpdatesOn') : t('settings.currentlyMuted')}
+                            isActive={notifications}
                             onPress={() => setNotifications(!notifications)}
-                            style={[
-                                styles.securityFeatureCard,
-                                notifications && styles.securityFeatureCardActive
-                            ]}
-                        >
-                            <View style={[styles.securityTopRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                                <View style={[styles.securityFeatureIcon, notifications && styles.securityFeatureIconActive]}>
-                                    <MaterialCommunityIcons
-                                        name={notifications ? "bell-ring" : "bell-off-outline"}
-                                        size={28}
-                                        color={notifications ? Colors.primary : Colors.textMuted}
-                                    />
-                                </View>
-                                <View style={[styles.securityStatusDot, notifications && styles.securityStatusDotActive]} />
-                            </View>
-                            <View style={[styles.securityFeatureText, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
-                                <Text style={styles.securityFeatureTitle}>{t('settings.alerts')}</Text>
-                                <Text style={[styles.securityFeatureSubtitle, { textAlign: isRTL ? 'right' : 'left' }]}>
-                                    {notifications ? t('settings.liveUpdatesOn') : t('settings.currentlyMuted')}
-                                </Text>
-                            </View>
-                        </Pressable>
+                            isRTL={isRTL}
+                        />
                     </View>
 
                     {/* Notification Access / Suppression Section */}
                     <View style={{ marginTop: 24 }}>
-                        <View style={styles.settingsCard}>
+                        <Pressable 
+                            style={({ pressed }) => [
+                                styles.settingsCard,
+                                pressed && { backgroundColor: Colors.primaryLight }
+                            ]}
+                            onPress={handleOpenNotificationAccess}
+                        >
                             <View style={{ padding: 16 }}>
-                                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                                     <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 12 }}>
-                                        <View style={[styles.securityFeatureIcon, notificationAccess && styles.securityFeatureIconActive, { width: 40, height: 40 }]}>
+                                        <View style={[styles.securityFeatureIcon, (notificationAccess || isIOS) && styles.securityFeatureIconActive, { width: 44, height: 44 }]}>
                                             <MaterialCommunityIcons
-                                                name="shield-alert-outline"
-                                                size={22}
-                                                color={notificationAccess ? Colors.primary : Colors.textMuted}
+                                                name="shield-check-outline"
+                                                size={24}
+                                                color={(notificationAccess || isIOS) ? Colors.primary : Colors.textMuted}
                                             />
                                         </View>
-                                        <View>
-                                            <Text style={styles.securityFeatureTitle}>{t('settings.notificationAccess')}</Text>
-                                            <Text style={[styles.securityFeatureSubtitle, { color: notificationAccess ? '#10b981' : Colors.textMuted }]}>
-                                                {notificationAccess ? t('settings.suppressionActive') : t('settings.suppressionInactive')}
+                                        <View style={{ gap: 2 }}>
+                                            <Text style={styles.securityFeatureTitle}>
+                                                {isIOS ? t('settings.iosMessageFiltering') : t('settings.notificationAccess')}
                                             </Text>
+                                            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
+                                                <View style={[styles.statusDot, (notificationAccess || isIOS) && styles.statusDotActive, { width: 6, height: 6 }]} />
+                                                <Text style={[styles.securityFeatureSubtitle, { color: (notificationAccess || isIOS) ? '#10b981' : Colors.textMuted, fontWeight: '600' }]}>
+                                                    {isIOS ? t('settings.suppressionActive') : (notificationAccess ? t('settings.suppressionActive') : t('settings.suppressionInactive'))}
+                                                </Text>
+                                            </View>
                                         </View>
                                     </View>
-                                    {notificationAccess && (
-                                        <MaterialCommunityIcons name="check-decagram" size={24} color="#10b981" />
-                                    )}
+                                    <MaterialCommunityIcons 
+                                        name={isRTL ? "chevron-left" : "chevron-right"} 
+                                        size={22} 
+                                        color={Colors.textMuted} 
+                                    />
                                 </View>
                                 
                                 <Text style={[styles.suppressDesc, { textAlign: isRTL ? 'right' : 'left' }]}>
-                                    {t('settings.suppressDesc')}
+                                    {isIOS ? t('settings.iosFilterDesc') : t('settings.suppressDesc')}
                                 </Text>
-
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.suppressButton,
-                                        pressed && styles.suppressButtonPressed
-                                    ]}
-                                    onPress={handleOpenNotificationAccess}
-                                >
-                                    <Text style={styles.suppressButtonText}>{t('settings.enableSuppression')}</Text>
-                                    <MaterialCommunityIcons name="arrow-right" size={18} color="#000" />
-                                </Pressable>
                             </View>
-                        </View>
+                        </Pressable>
                     </View>
                 </View>
 
@@ -284,28 +322,29 @@ export default function SettingsScreen() {
                          <SettingsRow
                             icon="shield-key-outline"
                             label={t('settings.privacyPolicy')}
-                            onPress={() => {}}
+                            onPress={() => router.push('/privacy')}
+                            showChevron
                         />
                          <View style={styles.divider} />
                         <SettingsRow
                             icon="file-document-outline"
                             label={t('settings.termsOfService')}
-                            onPress={() => {}}
+                            onPress={() => router.push('/terms')}
+                            showChevron
                         />
                     </View>
                 </View>
 
-                {/* Language Dropdown */}
+                {/* Language Selection */}
                 <View style={styles.section}>
                     <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings.systemLanguage')}</Text>
 
-                    {/* Dropdown trigger */}
                     <Pressable
-                        onPress={() => setLanguageDropdownOpen(!languageDropdownOpen)}
-                        style={[
+                        onPress={() => setLanguageModalVisible(true)}
+                        style={({ pressed }) => [
                             styles.dropdownTrigger,
                             { flexDirection: isRTL ? 'row-reverse' : 'row' },
-                            languageDropdownOpen && styles.dropdownTriggerOpen,
+                            pressed && { backgroundColor: Colors.primaryLight },
                         ]}
                     >
                         <View style={[styles.dropdownSelected, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
@@ -313,51 +352,18 @@ export default function SettingsScreen() {
                             <Text style={styles.dropdownName}>{currentLang.name}</Text>
                         </View>
                         <MaterialCommunityIcons
-                            name={languageDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                            name={isRTL ? "chevron-left" : "chevron-right"}
                             size={22}
                             color={Colors.textMuted}
                         />
                     </Pressable>
 
-                    {/* Dropdown options */}
-                    {languageDropdownOpen && (
-                        <View style={styles.dropdownList}>
-                            {LANGUAGES.map((lang, index) => {
-                                const isSelected = lang.code === selectedLanguage;
-                                return (
-                                    <React.Fragment key={lang.code}>
-                                        {index > 0 && <View style={styles.dropdownDivider} />}
-                                        <Pressable
-                                            style={({ pressed }) => [
-                                                styles.dropdownItem,
-                                                { flexDirection: isRTL ? 'row-reverse' : 'row' },
-                                                isSelected && styles.dropdownItemSelected,
-                                                pressed && styles.dropdownItemPressed,
-                                            ]}
-                                            onPress={() => handleSelectLanguage(lang.code)}
-                                        >
-                                            <View style={[styles.dropdownItemLeft, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                                                <Text style={styles.dropdownItemFlag}>{lang.flag}</Text>
-                                                <Text style={[
-                                                    styles.dropdownItemName,
-                                                    isSelected && styles.dropdownItemNameSelected,
-                                                ]}>
-                                                    {lang.name}
-                                                </Text>
-                                            </View>
-                                            {isSelected && (
-                                                <MaterialCommunityIcons
-                                                    name="check-circle"
-                                                    size={18}
-                                                    color={Colors.primary}
-                                                />
-                                            )}
-                                        </Pressable>
-                                    </React.Fragment>
-                                );
-                            })}
-                        </View>
-                    )}
+                    <LanguageModal 
+                        visible={languageModalVisible}
+                        onClose={() => setLanguageModalVisible(false)}
+                        selectedLanguage={selectedLanguage}
+                        onSelectLanguage={handleSelectLanguage}
+                    />
                 </View>
 
                 {/* Buy us a Coffee */}
@@ -383,6 +389,23 @@ export default function SettingsScreen() {
                         >
                             <Text style={styles.coffeeButtonText}>{t('settings.buyCoffee')}</Text>
                         </Pressable>
+                    </View>
+                </View>
+
+                {/* Data Management */}
+                <View style={[styles.section, { marginTop: 16 }]}>
+                    <Text style={[styles.sectionTitle, { color: '#ef4444', textAlign: isRTL ? 'right' : 'left' }]}>
+                        {t('settings.dataManagement')}
+                    </Text>
+                    <View style={styles.settingsCard}>
+                        <SettingsRow
+                            icon="delete-sweep-outline"
+                            label={t('settings.clearAllData')}
+                            description={t('settings.clearAllDataDesc')}
+                            onPress={handleClearData}
+                            labelStyle={{ color: '#ef4444' }}
+                            iconColor="#ef4444"
+                        />
                     </View>
                 </View>
 
@@ -484,8 +507,16 @@ const styles = StyleSheet.create({
         borderRadius: BorderRadius['2xl'],
         borderWidth: 1,
         borderColor: Colors.borderDark,
-        padding: 8,
         overflow: 'hidden',
+    },
+    statusDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: Colors.borderDark,
+    },
+    statusDotActive: {
+        backgroundColor: '#10b981',
     },
     divider: {
         height: 1,

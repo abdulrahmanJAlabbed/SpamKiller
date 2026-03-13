@@ -36,10 +36,11 @@ export function classifyMessage(
         keywordWeighting?: number; // 0-100
     } = {},
 ): SpamResult {
+    const safeText = String(text || '');
     const { aggressiveness = 50, keywordWeighting = 75 } = options;
 
     // Layer 1: Keyword matching
-    const keywordResult = matchKeywords(text, keywords, keywordWeighting);
+    const keywordResult = matchKeywords(safeText, keywords, keywordWeighting);
 
     // Layer 2: AI model (placeholder — requires native build with onnxruntime)
     // In a native build, this would call the ONNX inference service
@@ -50,7 +51,7 @@ export function classifyMessage(
     const method = getMethod(keywordResult.matched.length > 0, aiScore !== null);
 
     // Layer 3: Categorization
-    const category = categorizeMessage(text, isSpam);
+    const category = categorizeMessage(safeText, isSpam);
 
     return {
         isSpam,

@@ -91,8 +91,15 @@
     "filterFeat1": "Unlimited Custom Keywords",
     "filterFeat2": "Instant Threat Blocking",
     "filterFeat3": "Ad-Free Experience",
-    "filterCta": "Upgrade Now",
-    "aiTitle": "Neural Shield",
+    "filterCta": "开始保护",
+    "numbersTitle": "扩展访问",
+    "numbersSubtitle": "更多号码和过滤",
+    "numbersDesc": "解锁屏蔽无限电话号码和创建复杂自定义词汇过滤的能力，仅需",
+    "numbersCta": "扩展 Aegis",
+    "numbersFeat1": "无限静音号码",
+    "numbersFeat2": "自定义正则过滤",
+    "numbersFeat3": "优先支持",
+    "aiTitle": "Neural Shield Pro",
     "aiSubtitle": "Ultimate Protection",
     "aiDesc": "Enable full AI auto-detection and unlimited keywords for",
     "aiFeat1": "Full Neural Auto-detection",
@@ -117,6 +124,14 @@
     "termsOfService": "服务条款",
     "supportUs": "支持我们",
     "enjoying": "觉得 Aegis 如何？",
-    "buyCoffee": "请我们喝杯咖啡 ☕"
+    "buyCoffee": "请我们喝杯 coffee ☕",
+    "notificationAccess": "通知访问权限",
+    "suppressionActive": "拦截已激活",
+    "suppressionInactive": "拦截未激活",
+    "suppressDesc": "Aegis 需要特殊权限来截获并抑制来自其他应用的垃圾通知。",
+    "enableSuppression": "开启拦截",
+    "iosMessageFiltering": "信息过滤",
+    "iosFilterDesc": "Aegis 可以将垃圾短信息直接过滤到您的“垃圾信息”文件夹中。您必须在系统设置中开启此功能。",
+    "iosEnableFilter": "打开过滤设置"
   }
 }

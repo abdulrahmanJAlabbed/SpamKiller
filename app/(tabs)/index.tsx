@@ -7,11 +7,11 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { BorderRadius, Colors, FontSize, Spacing } from '@/constants/theme';
 import { useSpamFilter, type ScanResultItem } from '@/contexts/SpamFilterContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Animated,
+  Easing,
   Modal,
   Platform,
   Pressable,
@@ -20,9 +20,19 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withRepeat, 
+  withTiming, 
+  Easing as ReanimatedEasing,
+  interpolate,
+  interpolateColor
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
-function BlockedMessageCard({ item, t, onPress }: { item: ScanResultItem; t: any; onPress: () => void }) {
+const BlockedMessageCard = React.memo(({ item, t, onPress }: { item: ScanResultItem; t: any; onPress: () => void }) => {
   const timeAgo = getTimeAgo(item.timestamp, t);
   const { i18n } = useTranslation();
   const isRTL = i18n.dir() === 'rtl';
@@ -56,7 +66,7 @@ function BlockedMessageCard({ item, t, onPress }: { item: ScanResultItem; t: any
       </View>
     </Pressable>
   );
-}
+});
 
 function getTimeAgo(timestamp: number, t: any): string {
   const diff = Date.now() - timestamp;
@@ -74,8 +84,11 @@ export default function HomeScreen() {
   const { t, i18n } = useTranslation();
   const isRTL = i18n.dir() === 'rtl';
 
-  const shieldScale = useRef(new Animated.Value(0.8)).current;
-  const shieldOpacity = useRef(new Animated.Value(0)).current;
+  // Reanimated values for 60fps performance
+  const shieldScaleBase = useSharedValue(0.8);
+  const shieldOpacity = useSharedValue(0);
+  const breathValue = useSharedValue(0);
+  const rgbValue = useSharedValue(0);
 
   // Visual toggle for SpamKiller ON/OFF
   const [isActive, setIsActive] = useState(true);
@@ -83,42 +96,78 @@ export default function HomeScreen() {
   const { filter } = useLocalSearchParams<{ filter: string }>();
 
   // Filter messages by category if param exists
-  const blockedMessages = scanResults
-    .filter((r) => r.result.isSpam)
-    .filter((r) => {
+  const blockedMessages = React.useMemo(() => {
+    return scanResults
+      .filter((r) => r.result.isSpam)
+      .filter((r) => {
         if (!filter) return true;
         // Normalize: handle both 'scam' and 'catScam' formats
         const itemCat = (r.result.category || 'others').toLowerCase();
         const searchCat = filter.toLowerCase();
         return itemCat === searchCat || itemCat === `cat${searchCat}` || (searchCat.startsWith('cat') && itemCat === searchCat.substring(3));
-    });
+      });
+  }, [scanResults, filter]);
 
-  const displayedMessages = filter ? blockedMessages : blockedMessages.slice(0, 5);
+  const displayedMessages = React.useMemo(() => {
+    return filter ? blockedMessages : blockedMessages.slice(0, 5);
+  }, [blockedMessages, filter]);
 
   useEffect(() => {
-    // Shield entrance animation
-    Animated.parallel([
-      Animated.spring(shieldScale, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shieldOpacity, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    // Shield entrance
+    shieldScaleBase.value = withTiming(1, { duration: 600, easing: ReanimatedEasing.out(ReanimatedEasing.back(1.5)) });
+    shieldOpacity.value = withTiming(1, { duration: 600 });
+
+    // Continuous breathing on UI thread
+    breathValue.value = withRepeat(
+      withTiming(1, { duration: 2500, easing: ReanimatedEasing.inOut(ReanimatedEasing.ease) }),
+      -1,
+      true
+    );
+
+    // continuous RGB cycle on UI thread
+    rgbValue.value = withRepeat(
+      withTiming(1, { duration: 4000, easing: ReanimatedEasing.linear }),
+      -1,
+      false
+    );
   }, []);
 
   const handleToggleShield = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsActive(!isActive);
-    Animated.sequence([
-      Animated.timing(shieldScale, { toValue: 0.9, duration: 100, useNativeDriver: true }),
-      Animated.spring(shieldScale, { toValue: 1, friction: 8, useNativeDriver: true }),
-    ]).start();
+    shieldScaleBase.value = withTiming(0.9, { duration: 100 }, () => {
+      shieldScaleBase.value = withTiming(1, { duration: 200, easing: ReanimatedEasing.out(ReanimatedEasing.back(2)) });
+    });
   };
+
+  // Reanimated Styles
+  const shieldAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: shieldScaleBase.value * (1 + breathValue.value * 0.05) }
+    ],
+    opacity: shieldOpacity.value
+  }));
+
+  const pulseRingStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(breathValue.value, [0, 1], [1, 1.2]) }],
+    opacity: interpolate(breathValue.value, [0, 1], [0.2, 0.05])
+  }));
+
+  const aiIconAnimatedStyle = useAnimatedStyle(() => {
+    const borderColor = interpolateColor(
+      rgbValue.value,
+      [0, 0.25, 0.5, 0.75, 1],
+      ['#4285f4', '#9b72cb', '#d96570', '#1facff', '#4285f4']
+    );
+
+    return {
+      borderColor: aiEnabled ? borderColor : Colors.borderDark,
+      shadowColor: aiEnabled ? borderColor : 'transparent',
+      shadowOpacity: aiEnabled ? interpolate(breathValue.value, [0, 1], [0.6, 0.9]) : 0,
+      shadowRadius: interpolate(breathValue.value, [0, 1], [8, 16]),
+      borderWidth: aiEnabled ? 1.5 : 1,
+    };
+  });
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -126,7 +175,20 @@ export default function HomeScreen() {
 
       {/* Header */}
       <View style={[styles.header, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-        <MaterialCommunityIcons name="shield-check" size={24} color={Colors.primary} />
+        <Pressable 
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            aiEnabled ? router.push('/ai-settings') : router.push({ pathname: '/upgrade', params: { variant: 'ai' } });
+          }}
+        >
+          <Animated.View style={[styles.headerAiIcon, aiIconAnimatedStyle]}>
+            <MaterialCommunityIcons 
+              name="creation" 
+              size={22} 
+              color={aiEnabled ? Colors.white : Colors.textMuted} 
+            />
+          </Animated.View>
+        </Pressable>
         <Text style={styles.headerTitle}>AEGIS OS</Text>
       </View>
 
@@ -137,12 +199,7 @@ export default function HomeScreen() {
       >
         <View style={styles.shieldSection}>
           <View style={styles.shieldOuter}>
-            <Animated.View
-              style={[
-                styles.shieldInner,
-                { transform: [{ scale: shieldScale }], opacity: shieldOpacity }
-              ]}
-            >
+            <Animated.View style={[styles.shieldInner, shieldAnimatedStyle]}>
               <Pressable onPress={handleToggleShield}>
                 <View style={[
                   styles.shieldCore,
@@ -157,7 +214,7 @@ export default function HomeScreen() {
               </Pressable>
             </Animated.View>
             {isActive && (
-              <View style={styles.pulseRing} />
+              <Animated.View style={[styles.pulseRing, pulseRingStyle]} />
             )}
           </View>
           
@@ -298,6 +355,16 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: '500',
     letterSpacing: -0.3,
+  },
+  headerAiIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Colors.surfaceDark,
+    borderWidth: 1,
+    borderColor: Colors.borderDark,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     alignItems: 'center',

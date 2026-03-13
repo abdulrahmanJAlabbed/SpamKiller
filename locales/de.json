@@ -91,8 +91,15 @@
     "filterFeat1": "Unbegrenzte Wörter",
     "filterFeat2": "Sofortiges Blockieren",
     "filterFeat3": "Werbefrei",
-    "filterCta": "Jetzt Upgraden",
-    "aiTitle": "Neuronaler Schild",
+    "filterCta": "Schutz starten",
+    "numbersTitle": "Erweiterter Zugang",
+    "numbersSubtitle": "Mehr Nummern & Filter",
+    "numbersDesc": "Schalte die Möglichkeit frei, unbegrenzte Telefonnummern zu blockieren und komplexe benutzerdefinierte Wortfilter zu erstellen für",
+    "numbersCta": "Aegis erweitern",
+    "numbersFeat1": "Unbegrenzte lautlose Nummern",
+    "numbersFeat2": "Benutzerdefinierte Regex-Filter",
+    "numbersFeat3": "Prioritäts-Support",
+    "aiTitle": "Neural Shield Pro",
     "aiSubtitle": "Ultimativer Schutz",
     "aiDesc": "KI und unbegrenzte Wörter für",
     "aiFeat1": "Volle KI-Erkennung",
@@ -118,6 +125,14 @@
     "supportUs": "UNTERSTÜTZEN SIE UNS",
     "enjoying": "Gefällt dir Aegis?",
     "buyCoffee": "Kauf uns einen Kaffee ☕",
-    "usePasscode": "Passcode nutzen"
+    "usePasscode": "Passcode nutzen",
+    "notificationAccess": "Benachrichtigungszugriff",
+    "suppressionActive": "Unterdrückung aktiv",
+    "suppressionInactive": "Unterdrückung inaktiv",
+    "suppressDesc": "Aegis benötigt eine spezielle Berechtigung, um Spam-Benachrichtigungen von anderen Apps abzufangen und zu unterdrücken.",
+    "enableSuppression": "Unterdrückung aktivieren",
+    "iosMessageFiltering": "NACHRICHTENFILTERUNG",
+    "iosFilterDesc": "Aegis kann Spam-SMS direkt in Ihren 'Junk'-Ordner filtern. Sie müssen dies in den Systemeinstellungen aktivieren.",
+    "iosEnableFilter": "Filter-Einstellungen öffnen"
   }
 }

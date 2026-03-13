@@ -91,8 +91,15 @@
     "filterFeat1": "Mots-clés illimités",
     "filterFeat2": "Blocage instantané",
     "filterFeat3": "Sans publicité",
-    "filterCta": "Mettre à niveau",
-    "aiTitle": "Bouclier Neural",
+    "filterCta": "Démarrer la protection",
+    "numbersTitle": "Accès étendu",
+    "numbersSubtitle": "Plus de numéros et filtres",
+    "numbersDesc": "Débloquez la possibilité de bloquer des numéros de téléphone illimités et de créer des filtres de mots personnalisés complexes pour",
+    "numbersCta": "Étendre Aegis",
+    "numbersFeat1": "Numéros silencieux illimités",
+    "numbersFeat2": "Filtres Regex personnalisés",
+    "numbersFeat3": "Support prioritaire",
+    "aiTitle": "Neural Shield Pro",
     "aiSubtitle": "Protection Ultime",
     "aiDesc": "Activer la détection IA complète pour",
     "aiFeat1": "Autodétection Neurale",
@@ -118,6 +125,14 @@
     "supportUs": "SOUTENEZ-NOUS",
     "enjoying": "Vous aimez Aegis ?",
     "buyCoffee": "Payez-nous un café ☕",
-    "usePasscode": "Utiliser le code"
+    "usePasscode": "Utiliser le code",
+    "notificationAccess": "Accès aux notifications",
+    "suppressionActive": "Suppression activée",
+    "suppressionInactive": "Suppression désactivée",
+    "suppressDesc": "Aegis a besoin d'une autorisation spéciale pour intercepter et supprimer les notifications de spam des autres applications.",
+    "enableSuppression": "Activer la suppression",
+    "iosMessageFiltering": "FILTRAGE DES MESSAGES",
+    "iosFilterDesc": "Aegis peut filtrer les SMS de spam directement dans votre dossier 'Indésirables'. Vous devez activer cette option dans les Réglages du système.",
+    "iosEnableFilter": "Ouvrir les réglages de filtrage"
   }
 }

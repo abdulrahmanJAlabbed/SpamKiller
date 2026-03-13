@@ -47,8 +47,14 @@ interface SpamFilterContextValue {
     threatsBlocked: number;
     totalScanned: number;
 
+    // Premium/Monetization
+    isPremium: boolean;
+    setPremium: (val: boolean) => void;
+    restorePurchase: () => Promise<void>;
+
     // Debug/Simulation
     injectMessage: (text: string, sender: string) => void;
+    resetAllData: () => Promise<void>;
 }
 
 // ─── Default keywords ────────────────────────────────────────────
@@ -138,6 +144,9 @@ export function SpamFilterProvider({ children }: { children: ReactNode }) {
     const [threatsBlocked, setThreatsBlocked] = useState(3);
     const [totalScanned, setTotalScanned] = useState(7);
 
+    // Premium state
+    const [isPremium, setPremium] = useState(false);
+
     const keywordTexts = keywords.map((k) => k.text);
 
     // Sync keywords to iOS extension App Group whenever they change
@@ -156,6 +165,13 @@ export function SpamFilterProvider({ children }: { children: ReactNode }) {
     const removeSilencedNumber = useCallback((num: string) => {
         setSilencedNumbers(prev => prev.filter(n => n !== num));
     }, []);
+
+    // Persist silenced numbers whenever they change
+    React.useEffect(() => {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const { SILENCED_NUMBERS_KEY } = require('@/services/smsListener');
+        AsyncStorage.setItem(SILENCED_NUMBERS_KEY, JSON.stringify(silencedNumbers));
+    }, [silencedNumbers]);
 
     // Load background-captured messages from storage on mount
     React.useEffect(() => {
@@ -200,7 +216,8 @@ export function SpamFilterProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const scanMessage = useCallback((text: string, sender?: string): ScanResultItem => {
-        let result = classifyMessage(text, keywordTexts, {
+        const safeText = String(text || '');
+        let result = classifyMessage(safeText, keywordTexts, {
             aiEnabled,
             aggressiveness,
             keywordWeighting,
@@ -218,7 +235,7 @@ export function SpamFilterProvider({ children }: { children: ReactNode }) {
 
         const item: ScanResultItem = {
             id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
-            text,
+            text: safeText,
             sender,
             result,
             timestamp: Date.now(),
@@ -294,34 +311,78 @@ export function SpamFilterProvider({ children }: { children: ReactNode }) {
         setTotalScanned(0);
     }, []);
 
+    const restorePurchase = useCallback(async () => {
+        // Mocking a restoration process
+        return new Promise<void>((resolve) => {
+            setTimeout(() => {
+                setPremium(true);
+                resolve();
+            }, 1500);
+        });
+    }, []);
+
     const injectMessage = useCallback((text: string, sender: string) => {
         scanMessage(text, sender);
     }, [scanMessage]);
 
+    const resetAllData = useCallback(async () => {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const { SILENCED_STORAGE_KEY, SILENCED_NUMBERS_KEY } = require('@/services/smsListener');
+        
+        // 1. Reset memory state
+        setKeywords(DEFAULT_KEYWORDS);
+        setScanResults([]);
+        setThreatsBlocked(0);
+        setTotalScanned(0);
+        setSilencedNumbers([]);
+        
+        // 2. Clear storage
+        try {
+            await AsyncStorage.multiRemove([
+                SILENCED_STORAGE_KEY,
+                SILENCED_NUMBERS_KEY,
+                '@settings_biometric',
+            ]);
+            console.log('[Aegis] Storage purged successfully.');
+        } catch (err) {
+            console.error('[Aegis] Failed to clear storage:', err);
+        }
+    }, []);
+
+    const value = React.useMemo(() => ({
+        keywords,
+        addKeyword,
+        removeKeyword,
+        aiEnabled,
+        setAiEnabled,
+        aggressiveness,
+        setAggressiveness,
+        keywordWeighting,
+        setKeywordWeighting,
+        scanResults,
+        scanMessage,
+        scanMessages,
+        clearResults,
+        threatsBlocked,
+        totalScanned,
+        silencedNumbers,
+        addSilencedNumber,
+        removeSilencedNumber,
+        injectMessage,
+        isPremium,
+        setPremium,
+        restorePurchase,
+        resetAllData,
+    }), [
+        keywords, addKeyword, removeKeyword, aiEnabled, aggressiveness, 
+        keywordWeighting, scanResults, scanMessage, scanMessages, 
+        clearResults, threatsBlocked, totalScanned, silencedNumbers, 
+        addSilencedNumber, removeSilencedNumber, injectMessage, 
+        isPremium, restorePurchase, resetAllData
+    ]);
+
     return (
-        <SpamFilterContext.Provider
-            value={{
-                keywords,
-                addKeyword,
-                removeKeyword,
-                aiEnabled,
-                setAiEnabled,
-                aggressiveness,
-                setAggressiveness,
-                keywordWeighting,
-                setKeywordWeighting,
-                scanResults,
-                scanMessage,
-                scanMessages,
-                clearResults,
-                threatsBlocked,
-                totalScanned,
-                silencedNumbers,
-                addSilencedNumber,
-                removeSilencedNumber,
-                injectMessage,
-            }}
-        >
+        <SpamFilterContext.Provider value={value}>
             {children}
         </SpamFilterContext.Provider>
     );

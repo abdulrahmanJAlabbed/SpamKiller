@@ -9,6 +9,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 type TabIcon = keyof typeof MaterialCommunityIcons.glyphMap;
 
@@ -25,6 +27,24 @@ const TABS: TabConfig[] = [
   { name: 'activity', icon: 'view-grid-outline', iconFilled: 'view-grid' },
   { name: 'settings', icon: 'cog-outline', iconFilled: 'cog' },
 ];
+
+const TabIconView = React.memo(({ icon, isFocused }: { icon: TabIcon, isFocused: boolean }) => {
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: withSpring(isFocused ? 1.15 : 1, { damping: 15, stiffness: 300 }) }],
+    };
+  });
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <MaterialCommunityIcons
+        name={icon}
+        size={24}
+        color={isFocused ? Colors.primary : Colors.textMuted}
+      />
+    </Animated.View>
+  );
+});
 
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -44,6 +64,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
             <Pressable
               key={route.key}
               onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 const event = navigation.emit({
                   type: 'tabPress',
                   target: route.key,
@@ -55,10 +76,9 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
               }}
               style={styles.tab}
             >
-              <MaterialCommunityIcons
-                name={isFocused ? tab.iconFilled : tab.icon}
-                size={24}
-                color={isFocused ? Colors.primary : Colors.textMuted}
+              <TabIconView 
+                icon={isFocused ? tab.iconFilled : tab.icon} 
+                isFocused={isFocused} 
               />
               <Text
                 style={[

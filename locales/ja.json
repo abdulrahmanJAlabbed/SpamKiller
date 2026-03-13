@@ -91,8 +91,15 @@
     "filterFeat1": "Unlimited Custom Keywords",
     "filterFeat2": "Instant Threat Blocking",
     "filterFeat3": "Ad-Free Experience",
-    "filterCta": "Upgrade Now",
-    "aiTitle": "Neural Shield",
+    "filterCta": "保護を開始",
+    "numbersTitle": "拡張アクセス",
+    "numbersSubtitle": "より多くの番号とフィルター",
+    "numbersDesc": "無制限の電話番号のブロックや複雑なカスタム単語フィルターの作成が可能になります",
+    "numbersCta": "Aegisを拡張する",
+    "numbersFeat1": "無制限のサイレント番号",
+    "numbersFeat2": "カスタム正規表現フィルター",
+    "numbersFeat3": "優先サポート",
+    "aiTitle": "Neural Shield Pro",
     "aiSubtitle": "Ultimate Protection",
     "aiDesc": "Enable full AI auto-detection and unlimited keywords for",
     "aiFeat1": "Full Neural Auto-detection",
@@ -118,6 +125,14 @@
     "supportUs": "サポート",
     "enjoying": "Aegisはいかがですか？",
     "buyCoffee": "コーヒーをご馳走する ☕",
-    "usePasscode": "パスコードを使用"
+    "usePasscode": "パスコードを使用",
+    "notificationAccess": "通知へのアクセス",
+    "suppressionActive": "抑制が有効",
+    "suppressionInactive": "抑制が無効",
+    "suppressDesc": "他のアプリからのスパム通知を遮断し抑制するために、Aegisには特別な権限が必要です。",
+    "enableSuppression": "抑制を有効にする",
+    "iosMessageFiltering": "メッセージ・フィルタリング",
+    "iosFilterDesc": "AegisはスパムSMSを直接「迷惑メール」フォルダにフィルタリングできます。システム設定でこれを有効にする必要があります。",
+    "iosEnableFilter": "フィルタ設定を開く"
   }
 }
