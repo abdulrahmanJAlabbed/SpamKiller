@@ -105,13 +105,40 @@ export async function startSmsListener(
         const { startReadSMS } = SmsModule;
 
         startReadSMS((status: string, sms: string, error: any) => {
+            console.log(`[SmsListener] Raw SMS received: status=${status}, data=${sms}`);
             if (error) {
                 console.error('SMS read error:', error);
                 return;
             }
 
             if (status === 'success' && sms) {
-                handleIncomingSms(sms, keywords, options);
+                // Parse JSON if possible
+                let sender = 'Unknown';
+                let body = sms;
+
+                try {
+                    if (sms.startsWith('{')) {
+                        const parsed = JSON.parse(sms);
+                        if (parsed.address) sender = parsed.address;
+                        if (parsed.body) body = parsed.body;
+                    } else if (sms.startsWith('[') && sms.includes(',')) {
+                        // Robust [Sender, Body...] format
+                        const inner = sms.substring(1, sms.endsWith(']') ? sms.length - 1 : sms.length);
+                        const commaIdx = inner.indexOf(',');
+                        if (commaIdx !== -1) {
+                            const parsedSender = inner.substring(0, commaIdx).trim();
+                            const parsedBody = inner.substring(commaIdx + 1).trim();
+                            console.log(`[SmsListener] Parsed Emulator SMS: sender="${parsedSender}", body="${parsedBody}"`);
+                            handleIncomingSms(parsedSender, parsedBody, keywords, options);
+                            return;
+                        }
+                    }
+                    console.log(`[SmsListener] Parsed SMS: sender=${sender}, body=${body}`);
+                } catch (e) {
+                    console.log('[SmsListener] SMS parsing failed or not in expected format, using as raw body');
+                }
+
+                handleIncomingSms(sender, body, keywords, options);
             }
         });
 
@@ -145,16 +172,44 @@ export function stopSmsListener(): void {
 
 // ─── Internal ────────────────────────────────────────────────────
 
-function handleIncomingSms(
+async function handleIncomingSms(
+    sender: string,
     smsBody: string,
     keywords: string[],
     options: { aggressiveness?: number; keywordWeighting?: number },
-): void {
-    // Parse sender if available (format varies by library version)
-    const sender = 'Unknown';
+): Promise<void> {
+    // 1. Check if sender is in silenced numbers list
+    try {
+        const storedSilenced = await AsyncStorage.getItem('@spamkiller_silenced_numbers');
+        const silencedList: string[] = storedSilenced ? JSON.parse(storedSilenced) : [];
+        if (silencedList.includes(sender)) {
+            console.log(`[SpamKiller] BLOCKED: Message from silenced number [${sender}]`);
+            // Treat as spam
+            const msg: SilencedMessage = {
+                id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+                sender,
+                text: smsBody,
+                result: {
+                    isSpam: true,
+                    confidence: 1.0,
+                    method: 'none',
+                    matchedKeywords: [],
+                    aiScore: null,
+                    category: 'catOthers'
+                },
+                timestamp: Date.now(),
+            };
+            storeSilencedMessage(msg);
+            onSpamDetected?.(msg);
+            return;
+        }
+    } catch (err) {
+        console.error('Failed to check silenced numbers:', err);
+    }
 
+    // 2. Run through normal classifier
     const result = classifyMessage(smsBody, keywords, {
-        aiEnabled: false, // keep fast for real-time
+        aiEnabled: true,
         aggressiveness: options.aggressiveness ?? 50,
         keywordWeighting: options.keywordWeighting ?? 75,
     });
@@ -174,7 +229,7 @@ function handleIncomingSms(
         // Callback
         onSpamDetected?.(msg);
 
-        console.log(`[SpamKiller] SILENCED: "${smsBody.substring(0, 50)}..." (${result.confidence.toFixed(2)} confidence)`);
+        console.log(`[SpamKiller] SILENCED: [${sender}] "${smsBody.substring(0, 50)}..." (${result.confidence.toFixed(2)} confidence)`);
     } else {
         onHamDetected?.(sender, smsBody);
     }

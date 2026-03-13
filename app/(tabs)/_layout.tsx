@@ -120,6 +120,5 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: FontSize['2xs'],
     fontWeight: '500',
-    fontFamily: 'Inter',
   },
 });

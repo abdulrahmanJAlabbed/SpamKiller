@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Alert,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -43,6 +44,7 @@ export default function SettingsScreen() {
     // Core states
     const [notifications, setNotifications] = useState(true);
     const [biometricAuth, setBiometricAuth] = useState(false);
+    const [notificationAccess, setNotificationAccess] = useState(false);
 
     // Language states
     const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || 'en');
@@ -130,6 +132,16 @@ export default function SettingsScreen() {
         }
     };
 
+    const handleOpenNotificationAccess = () => {
+        if (Platform.OS === 'android') {
+            const { Linking } = require('react-native');
+            // Intent to open Notification Access settings
+            Linking.sendIntent('android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS');
+        } else {
+            Alert.alert('Info', 'Notification suppression is managed by iOS system settings.');
+        }
+    };
+
     if (!isLoaded) {
         return (
             <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}>
@@ -206,6 +218,49 @@ export default function SettingsScreen() {
                             </View>
                         </Pressable>
                     </View>
+
+                    {/* Notification Access / Suppression Section */}
+                    <View style={{ marginTop: 24 }}>
+                        <View style={styles.settingsCard}>
+                            <View style={{ padding: 16 }}>
+                                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 12 }}>
+                                        <View style={[styles.securityFeatureIcon, notificationAccess && styles.securityFeatureIconActive, { width: 40, height: 40 }]}>
+                                            <MaterialCommunityIcons
+                                                name="shield-alert-outline"
+                                                size={22}
+                                                color={notificationAccess ? Colors.primary : Colors.textMuted}
+                                            />
+                                        </View>
+                                        <View>
+                                            <Text style={styles.securityFeatureTitle}>{t('settings.notificationAccess')}</Text>
+                                            <Text style={[styles.securityFeatureSubtitle, { color: notificationAccess ? '#10b981' : Colors.textMuted }]}>
+                                                {notificationAccess ? t('settings.suppressionActive') : t('settings.suppressionInactive')}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    {notificationAccess && (
+                                        <MaterialCommunityIcons name="check-decagram" size={24} color="#10b981" />
+                                    )}
+                                </View>
+                                
+                                <Text style={[styles.suppressDesc, { textAlign: isRTL ? 'right' : 'left' }]}>
+                                    {t('settings.suppressDesc')}
+                                </Text>
+
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.suppressButton,
+                                        pressed && styles.suppressButtonPressed
+                                    ]}
+                                    onPress={handleOpenNotificationAccess}
+                                >
+                                    <Text style={styles.suppressButtonText}>{t('settings.enableSuppression')}</Text>
+                                    <MaterialCommunityIcons name="arrow-right" size={18} color="#000" />
+                                </Pressable>
+                            </View>
+                        </View>
+                    </View>
                 </View>
 
                 {/* AI Settings link */}
@@ -213,11 +268,29 @@ export default function SettingsScreen() {
                     <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings.aiProtection')}</Text>
                     <View style={styles.settingsCard}>
                         <SettingsRow
-                            icon="brain"
+                            icon="creation"
                             label={t('settings.aiSpamDetector')}
                             description={t('settings.neuralConfig')}
                             onPress={() => router.push({ pathname: '/ai-settings' })}
                             showChevron
+                        />
+                    </View>
+                </View>
+
+                {/* Legal Section */}
+                <View style={styles.section}>
+                    <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('settings.securityAlerts')}</Text>
+                    <View style={styles.settingsCard}>
+                         <SettingsRow
+                            icon="shield-key-outline"
+                            label={t('settings.privacyPolicy')}
+                            onPress={() => {}}
+                        />
+                         <View style={styles.divider} />
+                        <SettingsRow
+                            icon="file-document-outline"
+                            label={t('settings.termsOfService')}
+                            onPress={() => {}}
                         />
                     </View>
                 </View>
@@ -339,8 +412,7 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         paddingHorizontal: 8,
         marginBottom: 16,
-        fontFamily: 'Inter',
-    },
+        },
     // New Security Grid
     securityGrid: {
         flexDirection: 'row',
@@ -357,8 +429,8 @@ const styles = StyleSheet.create({
         gap: 16,
     },
     securityFeatureCardActive: {
-        backgroundColor: 'rgba(147, 90, 246, 0.08)',
-        borderColor: 'rgba(147, 90, 246, 0.3)',
+        backgroundColor: Colors.primaryLight,
+        borderColor: Colors.primaryBorder,
     },
     securityTopRow: {
         flexDirection: 'row',
@@ -400,13 +472,11 @@ const styles = StyleSheet.create({
         color: Colors.textPrimary,
         fontSize: FontSize.base,
         fontWeight: '600',
-        fontFamily: 'Inter',
-    },
+        },
     securityFeatureSubtitle: {
         color: Colors.textMuted,
         fontSize: FontSize.xs,
-        fontFamily: 'Inter',
-        lineHeight: 18,
+            lineHeight: 18,
     },
     // Generic Settings Card
     settingsCard: {
@@ -452,8 +522,7 @@ const styles = StyleSheet.create({
         color: Colors.textPrimary,
         fontSize: FontSize.base,
         fontWeight: '500',
-        fontFamily: 'Inter',
-    },
+        },
     dropdownList: {
         backgroundColor: Colors.surfaceDark,
         borderWidth: 1,
@@ -492,8 +561,7 @@ const styles = StyleSheet.create({
     dropdownItemName: {
         color: Colors.textSecondary,
         fontSize: FontSize.base,
-        fontFamily: 'Inter',
-    },
+        },
     dropdownItemNameSelected: {
         color: Colors.primary,
         fontWeight: '600',
@@ -516,13 +584,11 @@ const styles = StyleSheet.create({
         color: Colors.textPrimary,
         fontSize: FontSize.lg,
         fontWeight: '600',
-        fontFamily: 'Inter',
         marginBottom: 4,
     },
     coffeeSubtitle: {
         color: Colors.textMuted,
         fontSize: FontSize.sm,
-        fontFamily: 'Inter',
     },
     coffeeButton: {
         backgroundColor: '#f59e0b',
@@ -538,6 +604,28 @@ const styles = StyleSheet.create({
         color: Colors.backgroundDark,
         fontSize: FontSize.base,
         fontWeight: '700',
-        fontFamily: 'Inter',
+    },
+    suppressDesc: {
+        color: Colors.textMuted,
+        fontSize: FontSize.xs,
+        lineHeight: 18,
+        marginBottom: 20,
+    },
+    suppressButton: {
+        backgroundColor: Colors.primary,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 14,
+        borderRadius: BorderRadius.xl,
+    },
+    suppressButtonPressed: {
+        opacity: 0.8,
+    },
+    suppressButtonText: {
+        color: '#000',
+        fontSize: FontSize.base,
+        fontWeight: '600',
     },
 });

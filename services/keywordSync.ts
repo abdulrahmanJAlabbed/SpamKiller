@@ -8,7 +8,14 @@
  */
 
 import { Platform } from 'react-native';
-import SharedGroupPreferences from 'react-native-shared-group-preferences';
+
+// Lazy load SharedGroupPreferences - may not be available in dev client
+let SharedGroupPreferences: any = null;
+try {
+    SharedGroupPreferences = require('react-native-shared-group-preferences');
+} catch (e) {
+    console.warn('[KeywordSync] react-native-shared-group-preferences not available in this build');
+}
 
 const APP_GROUP = 'group.com.cellaz.SpamKiller';
 const ANDROID_PREFS = 'SpamKillerPrefs';
@@ -17,21 +24,33 @@ const ANDROID_PREFS = 'SpamKillerPrefs';
  * Sync keywords to shared storage so background extensions can read them.
  * iOS ILMessageFilterExtension uses App Group UserDefaults.
  * Android SmsReceiver uses SharedPreferences.
+ * 
+ * In dev client, this may be unavailable but shouldn't crash the app.
  */
 export async function syncKeywordsToExtension(keywords: string[]): Promise<void> {
     try {
+        if (!SharedGroupPreferences) {
+            console.warn('[KeywordSync] Skipping sync - native module not available in this build context');
+            return;
+        }
+
         if (Platform.OS === 'ios') {
-            await SharedGroupPreferences.setItem('blockedKeywords', keywords, APP_GROUP);
-            console.log(`[KeywordSync] Synced ${keywords.length} keywords to iOS App Group: ${APP_GROUP}`);
+            if (typeof SharedGroupPreferences?.setItem === 'function') {
+                await SharedGroupPreferences.setItem('blockedKeywords', keywords, APP_GROUP);
+                console.log(`[KeywordSync] Synced ${keywords.length} keywords to iOS App Group: ${APP_GROUP}`);
+            }
         } else if (Platform.OS === 'android') {
-            // Android SharedPreferences usually store strings or string sets easily.
-            // react-native-shared-group-preferences stringifies JSON by default under the hood.
-            // Our Java receiver expects a comma separated string to make parsing simple.
             const keywordsStr = keywords.join(',');
-            await SharedGroupPreferences.setItem('blockedKeywords', keywordsStr, ANDROID_PREFS);
-            console.log(`[KeywordSync] Synced keywords to Android SharedPreferences: ${ANDROID_PREFS}`);
+            // Add safety check for Android SharedGroupPreferences compatibility
+            if (typeof SharedGroupPreferences?.setItem === 'function') {
+                await SharedGroupPreferences.setItem('blockedKeywords', keywordsStr, ANDROID_PREFS);
+                console.log(`[KeywordSync] Synced keywords to Android SharedPreferences: ${ANDROID_PREFS}`);
+            } else {
+                console.warn('[KeywordSync] SharedGroupPreferences.setItem is not a function on this platform');
+            }
         }
     } catch (err) {
-        console.error('[KeywordSync] Failed to sync keywords to native storage (is the dev client built?):', err);
+        console.warn('[KeywordSync] Failed to sync keywords to native storage:', err);
+        // Don't throw - allow app to continue even if sync fails
     }
 }

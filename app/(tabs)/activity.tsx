@@ -4,11 +4,15 @@
  */
 
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { BorderRadius, Colors, FontSize, Spacing } from '@/constants/theme';
+import { useSpamFilter } from '@/contexts/SpamFilterContext';
+import { Colors, FontSize, Spacing, BorderRadius } from '@/constants/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+    FlatList,
     LayoutAnimation,
     Pressable,
     ScrollView,
@@ -25,27 +29,66 @@ interface Category {
     id: string;
     icon: CategoryIcon;
     color: string;
-    bgColor: string;
-    count: number;
 }
 
 const CATEGORIES: Category[] = [
-    { id: 'scam', icon: 'shield-alert', color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.1)', count: 42 },
-    { id: 'promos', icon: 'tag-multiple', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)', count: 128 },
-    { id: 'otp', icon: 'key-variant', color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)', count: 56 },
-    { id: 'bank', icon: 'bank', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)', count: 24 },
-    { id: 'delivery', icon: 'truck-delivery', color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.1)', count: 18 },
-    { id: 'health', icon: 'heart-pulse', color: '#f43f5e', bgColor: 'rgba(244, 63, 94, 0.1)', count: 7 },
-    { id: 'work', icon: 'briefcase', color: '#0ea5e9', bgColor: 'rgba(14, 165, 233, 0.1)', count: 35 },
-    { id: 'others', icon: 'dots-grid', color: '#94a3b8', bgColor: 'rgba(148, 163, 184, 0.1)', count: 89 },
+    { id: 'scam', icon: 'shield-alert-outline', color: '#ff4b2b' },
+    { id: 'promos', icon: 'tag-outline', color: '#f59e0b' },
+    { id: 'otp', icon: 'key-outline', color: '#10b981' },
+    { id: 'bank', icon: 'bank-outline', color: '#3b82f6' },
+    { id: 'delivery', icon: 'package-variant-closed', color: '#8b5cf6' },
+    { id: 'health', icon: 'heart-pulse', color: '#ec4899' },
+    { id: 'work', icon: 'briefcase-outline', color: '#6366f1' },
+    { id: 'others', icon: 'dots-horizontal-circle-outline', color: '#94a3b8' },
 ];
 
 export default function ActivityScreen() {
     const insets = useSafeAreaInsets();
     const { t, i18n } = useTranslation();
     const isRTL = i18n.dir() === 'rtl';
+    const { scanResults } = useSpamFilter();
+
+    const categoryCounts = React.useMemo(() => {
+        const counts: Record<string, number> = {};
+        scanResults.forEach(item => {
+            let catRaw = item.result.category || 'others';
+            let catId = (catRaw as string).toLowerCase();
+            
+            // Map 'catscam' -> 'scam', 'catpromos' -> 'promos' etc.
+            if (catId.startsWith('cat')) {
+                catId = catId.substring(3);
+            }
+            
+            counts[catId] = (counts[catId] || 0) + 1;
+        });
+        return counts;
+    }, [scanResults]);
     const [isSearching, setIsSearching] = React.useState(false);
     const [searchQuery, setSearchQuery] = React.useState('');
+
+    const filteredCategories = React.useMemo(() => {
+        if (!searchQuery.trim()) return CATEGORIES;
+        const q = searchQuery.toLowerCase();
+        return CATEGORIES.filter(cat => 
+            t(`activity.${getCategoryKey(cat.id)}`).toLowerCase().includes(q)
+        );
+    }, [searchQuery, t]);
+
+    const filteredMessages = React.useMemo(() => {
+        if (!searchQuery.trim()) return [];
+        const q = searchQuery.toLowerCase();
+        return scanResults.filter(msg => 
+            (msg.sender?.toLowerCase().includes(q) || msg.text.toLowerCase().includes(q))
+        );
+    }, [searchQuery, scanResults]);
+
+    const handleCategoryPress = (categoryId: string) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        router.push({
+            pathname: '/category-feed',
+            params: { categoryId }
+        });
+    };
 
     const getCategoryKey = (id: string) => {
         const keyMap: Record<string, string> = {
@@ -92,25 +135,72 @@ export default function ActivityScreen() {
                     {t('activity.subtitle')}
                 </Text>
 
-                <View style={[styles.gridContainer, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                    {CATEGORIES.map((cat) => (
-                        <Pressable
-                            key={cat.id}
-                            style={({ pressed }) => [
-                                styles.card,
-                                { alignItems: isRTL ? 'flex-end' : 'flex-start' },
-                                pressed && styles.cardPressed,
-                            ]}
-                        >
-                            <View style={[styles.iconWrapper, { backgroundColor: cat.bgColor }]}>
-                                <MaterialCommunityIcons name={cat.icon} size={28} color={cat.color} />
-                            </View>
-                            <View style={[styles.textContainer, { alignItems: isRTL ? 'flex-end' : 'flex-start', paddingTop: 8 }]}>
-                                <Text style={[styles.cardLabel, { textAlign: isRTL ? 'right' : 'left' }]}>{t(`activity.${getCategoryKey(cat.id)}`)}</Text>
-                            </View>
-                        </Pressable>
-                    ))}
-                </View>
+                {(filteredCategories.length > 0) && (
+                    <View style={[styles.gridContainer, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                        {filteredCategories.map((cat) => (
+                            <Pressable
+                                key={cat.id}
+                                onPress={() => handleCategoryPress(cat.id)}
+                                style={({ pressed }) => [
+                                    styles.card,
+                                    {
+                                        backgroundColor: `${cat.color}10`, // 10% opacity hex
+                                        borderColor: `${cat.color}20`,
+                                        paddingLeft: isRTL ? 16 : 12,
+                                        paddingRight: isRTL ? 12 : 16,
+                                    },
+                                    pressed && styles.cardPressed,
+                                ]}
+                            >
+                                <View style={[styles.iconContainer, { backgroundColor: `${cat.color}15` }]}>
+                                    <MaterialCommunityIcons name={cat.icon as any} size={24} color={cat.color} />
+                                </View>
+                                <View style={[styles.textContainer, { alignItems: isRTL ? 'flex-end' : 'flex-start', paddingTop: 8 }]}>
+                                    <Text 
+                                        style={[styles.cardLabel, { textAlign: isRTL ? 'right' : 'left' }]}
+                                        numberOfLines={1}
+                                        adjustsFontSizeToFit
+                                    >
+                                        {t(`activity.${getCategoryKey(cat.id)}`)}
+                                    </Text>
+                                    <Text style={styles.cardCount} numberOfLines={1}>
+                                        {categoryCounts[cat.id] || 0} {t('activity.silenced')}
+                                    </Text>
+                                </View>
+                            </Pressable>
+                        ))}
+                    </View>
+                )}
+
+                {isSearching && filteredMessages.length > 0 && (
+                    <View style={styles.messageResults}>
+                        <Text style={[styles.sectionTitle, { textAlign: isRTL ? 'right' : 'left' }]}>
+                            {t('home.recentBlocked').toUpperCase()}
+                        </Text>
+                        {filteredMessages.map((msg) => (
+                            <Pressable 
+                                key={msg.id} 
+                                style={styles.messageCard}
+                                onPress={() => handleCategoryPress(msg.result.category || 'others')}
+                            >
+                                <View style={styles.messageIcon}>
+                                    <MaterialCommunityIcons name="shield-off" size={16} color="#ef4444" />
+                                </View>
+                                <View style={styles.messageInfo}>
+                                    <Text style={styles.messageSender} numberOfLines={1}>{msg.sender || t('home.unknown')}</Text>
+                                    <Text style={styles.messageSnippet} numberOfLines={1}>{msg.text}</Text>
+                                </View>
+                            </Pressable>
+                        ))}
+                    </View>
+                )}
+
+                {isSearching && filteredCategories.length === 0 && filteredMessages.length === 0 && (
+                    <View style={styles.noResults}>
+                        <MaterialCommunityIcons name="text-search-variant" size={48} color={Colors.textMuted} />
+                        <Text style={styles.noResultsText}>No matches found for "{searchQuery}"</Text>
+                    </View>
+                )}
 
                 <View style={{ height: 120 }} />
             </ScrollView>
@@ -146,13 +236,11 @@ const styles = StyleSheet.create({
         flex: 1,
         color: Colors.textPrimary,
         fontSize: FontSize.base,
-        fontFamily: 'Inter',
-    },
+        },
     subtitle: {
         color: Colors.textMuted,
         fontSize: FontSize.sm,
-        fontFamily: 'Inter',
-        marginBottom: 24,
+            marginBottom: 24,
         lineHeight: 20,
     },
     gridContainer: {
@@ -172,29 +260,79 @@ const styles = StyleSheet.create({
         alignItems: 'flex-start',
     },
     cardPressed: {
-        backgroundColor: Colors.primaryLight,
-        borderColor: Colors.primaryBorder,
         transform: [{ scale: 0.98 }],
+        opacity: 0.9,
     },
-    iconWrapper: {
-        width: 52,
-        height: 52,
-        borderRadius: BorderRadius.xl,
+    iconContainer: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
         alignItems: 'center',
         justifyContent: 'center',
+        marginBottom: 8,
     },
     textContainer: {
+        flex: 1,
         gap: 4,
     },
     cardLabel: {
         color: Colors.textPrimary,
         fontSize: FontSize.base,
-        fontWeight: '600',
-        fontFamily: 'Inter',
-    },
+        },
     cardCount: {
         color: Colors.textMuted,
         fontSize: FontSize.xs,
-        fontFamily: 'Inter',
+        },
+    messageResults: {
+        marginTop: 32,
+        gap: 12,
+    },
+    sectionTitle: {
+        color: Colors.textMuted,
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 1.5,
+        marginBottom: 8,
+    },
+    messageCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderRadius: BorderRadius.lg,
+        padding: 12,
+        gap: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    messageIcon: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    messageInfo: {
+        flex: 1,
+    },
+    messageSender: {
+        color: Colors.textPrimary,
+        fontSize: FontSize.sm,
+        fontWeight: '600',
+    },
+    messageSnippet: {
+        color: Colors.textMuted,
+        fontSize: FontSize.xs,
+        marginTop: 2,
+    },
+    noResults: {
+        alignItems: 'center',
+        paddingVertical: 60,
+        gap: 16,
+    },
+    noResultsText: {
+        color: Colors.textMuted,
+        fontSize: FontSize.sm,
+        textAlign: 'center',
     },
 });

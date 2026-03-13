@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -32,25 +33,29 @@ const languageDetectorPlugin = {
     async: true,
     init: () => { },
     detect: async function (callback: (lang: string) => void) {
+        // Guard against SSR / Node environments
+        if (Platform.OS === 'web' && typeof window === 'undefined') {
+            return callback('en');
+        }
+
         try {
-            // Get stored language from Async Storage
-            await AsyncStorage.getItem(STORE_LANGUAGE_KEY).then((language) => {
-                if (language) {
-                    // If language was stored before, use it
-                    callback(language);
-                } else {
-                    // Default to english
-                    callback('en');
-                }
-            });
+            const language = await AsyncStorage.getItem(STORE_LANGUAGE_KEY);
+            if (language) {
+                callback(language);
+            } else {
+                callback('en');
+            }
         } catch (error) {
             console.log('Error reading language', error);
             callback('en');
         }
     },
     cacheUserLanguage: async function (language: string) {
+        if (Platform.OS === 'web' && typeof window === 'undefined') {
+            return;
+        }
+
         try {
-            // Save chosen language
             await AsyncStorage.setItem(STORE_LANGUAGE_KEY, language);
         } catch (error) {
             console.log('Error caching language', error);

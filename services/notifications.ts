@@ -5,6 +5,7 @@
  */
 
 import * as Notifications from 'expo-notifications';
+import { Colors } from '@/constants/theme';
 import { Platform } from 'react-native';
 
 // Configure how notifications are presented when app is in foreground
@@ -39,6 +40,11 @@ Notifications.setNotificationHandler({
  * Also sets up Android notification channels.
  */
 export async function registerForPushNotifications(): Promise<string | null> {
+    // Push notifications are not supported on web in the same way, or might fail in SSR
+    if (Platform.OS === 'web') {
+        return null;
+    }
+
     try {
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
@@ -60,7 +66,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
                 name: 'Shield OS Alerts',
                 importance: Notifications.AndroidImportance.HIGH,
                 vibrationPattern: [0, 250, 250, 250],
-                lightColor: '#935af6',
+                lightColor: Colors.primary,
             });
 
             // Spam silenced channel — NO sound, NO vibration
@@ -75,9 +81,14 @@ export async function registerForPushNotifications(): Promise<string | null> {
             });
         }
 
-        const tokenData = await Notifications.getExpoPushTokenAsync();
-        console.log('Push token:', tokenData.data);
-        return tokenData.data;
+        try {
+            const tokenData = await Notifications.getExpoPushTokenAsync();
+            console.log('Push token:', tokenData.data);
+            return tokenData.data;
+        } catch (tokenErr) {
+            console.warn('[Notifications] Expo Push Token skipped (likely Firebase not initialized):', tokenErr);
+            return null;
+        }
     } catch (error) {
         console.error('Failed to register for push notifications:', error);
         return null;
@@ -123,6 +134,10 @@ export function setupNotificationListeners(
     onNotificationReceived?: (notification: Notifications.Notification) => void,
     onNotificationResponse?: (response: Notifications.NotificationResponse) => void,
 ) {
+    if (Platform.OS === 'web') {
+        return () => { };
+    }
+
     const receivedSubscription = Notifications.addNotificationReceivedListener(
         (notification) => {
             console.log('Notification received:', notification.request.content.title);

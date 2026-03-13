@@ -5,12 +5,23 @@
  * Layer 2: AI ONNX model — requires native build, graceful fallback
  */
 
+export type MessageCategory = 
+    | 'catScam' 
+    | 'catPromos' 
+    | 'catOtp' 
+    | 'catBank' 
+    | 'catDelivery' 
+    | 'catHealth' 
+    | 'catWork' 
+    | 'catOthers';
+
 export interface SpamResult {
     isSpam: boolean;
     confidence: number;
     method: 'keyword' | 'ai' | 'both' | 'none';
     matchedKeywords: string[];
     aiScore: number | null;
+    category: MessageCategory;
 }
 
 /**
@@ -38,12 +49,16 @@ export function classifyMessage(
     const isSpam = determineSpam(keywordResult, aiScore, aggressiveness);
     const method = getMethod(keywordResult.matched.length > 0, aiScore !== null);
 
+    // Layer 3: Categorization
+    const category = categorizeMessage(text, isSpam);
+
     return {
         isSpam,
         confidence: calculateConfidence(keywordResult, aiScore, aggressiveness),
         method,
         matchedKeywords: keywordResult.matched,
         aiScore,
+        category,
     };
 }
 
@@ -82,7 +97,11 @@ function matchKeywords(
     }
 
     const lowerText = text.toLowerCase();
-    const matched = keywords.filter((kw) => lowerText.includes(kw.toLowerCase()));
+    
+    const matched = keywords.filter((kw) => {
+        const pattern = new RegExp(`\\b${kw.toLowerCase()}\\b`, 'i');
+        return pattern.test(lowerText);
+    });
 
     if (matched.length === 0) {
         return { matched: [], score: 0 };
@@ -103,25 +122,16 @@ function determineSpam(
     aggressiveness: number,
 ): boolean {
     // Threshold decreases with aggressiveness (0-100)
-    // At 0 aggressiveness: threshold = 0.8 (very conservative)
-    // At 50: threshold = 0.4
-    // At 100: threshold = 0.1 (very aggressive)
     const threshold = 0.8 - (aggressiveness / 100) * 0.7;
 
-    // If we have both AI and keyword, combine them
-    if (aiScore !== null && keywordResult.matched.length > 0) {
-        const combined = (aiScore * 0.6) + (keywordResult.score * 0.4);
-        return combined >= threshold;
+    // RULE: If any blocklist keyword matches, it's definitively spam
+    if (keywordResult.matched.length > 0) {
+        return true; 
     }
 
-    // AI only
+    // AI only fallback
     if (aiScore !== null) {
         return aiScore >= threshold;
-    }
-
-    // Keyword only
-    if (keywordResult.matched.length > 0) {
-        return keywordResult.score >= threshold;
     }
 
     return false;
@@ -158,4 +168,44 @@ function getMethod(
     if (hasKeyword) return 'keyword';
     if (hasAi) return 'ai';
     return 'none';
+}
+
+/**
+ * Assign a category to the message based on keywords and patterns.
+ */
+function categorizeMessage(text: string, isSpam: boolean): MessageCategory {
+    const t = text.toLowerCase();
+
+    // 1. Scam & Phishing (High priority if isSpam)
+    if (isSpam) {
+        const scamPatterns = ['winner', 'won', 'claim', 'gift card', 'lottery', 'inheritance', 'bank account freeze', 'verify address', 'unusual activity'];
+        if (scamPatterns.some(p => t.includes(p))) return 'catScam';
+    }
+
+    // 2. OTP & Auth
+    const otpPatterns = ['otp', 'verification code', 'code is', 'don\'t share', 'your code', 'verification', 'auth'];
+    if (otpPatterns.some(p => t.includes(p))) return 'catOtp';
+
+    // 3. Banking & Bills
+    const bankPatterns = ['bank', 'chase', 'wells fargo', 'boa', 'payment', 'bill', 'statement', 'balance', 'credit card'];
+    if (bankPatterns.some(p => t.includes(p))) return 'catBank';
+
+    // 4. Deliveries
+    const deliveryPatterns = ['ups', 'fedex', 'usps', 'dhl', 'package', 'delivered', 'tracking', 'shipped', 'delivery'];
+    if (deliveryPatterns.some(p => t.includes(p))) return 'catDelivery';
+
+    // 5. Health & Medical
+    const healthPatterns = ['doctor', 'appointment', 'pharmacy', 'prescription', 'health', 'medical', 'test result', 'clinic'];
+    if (healthPatterns.some(p => t.includes(p))) return 'catHealth';
+
+    // 6. Work & Teams
+    const workPatterns = ['meeting', 'calendar', 'slack', 'jira', 'confluence', 'zoom', 'invite', 'team', 'shift', 'manager'];
+    if (workPatterns.some(p => t.includes(p))) return 'catWork';
+
+    // 7. Promos & Coupons
+    const promoPatterns = ['off', 'save', 'discount', 'deal', 'offer', 'sale', 'shop', 'limited time', 'coupon', 'promo'];
+    if (promoPatterns.some(p => t.includes(p))) return 'catPromos';
+
+    // Default
+    return isSpam ? 'catScam' : 'catOthers';
 }

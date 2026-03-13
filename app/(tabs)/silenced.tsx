@@ -4,6 +4,7 @@
 
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { BorderRadius, Colors, FontSize, Spacing } from '@/constants/theme';
+import { useSpamFilter } from '@/contexts/SpamFilterContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,26 +23,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function SilencedScreen() {
     const insets = useSafeAreaInsets();
     const { t } = useTranslation();
+    const { silencedNumbers, addSilencedNumber, removeSilencedNumber } = useSpamFilter();
     const [phoneNumber, setPhoneNumber] = useState('');
-    const [silencedList, setSilencedList] = useState([
-        '+1 (555) 019-2831',
-        '+44 7700 900077',
-    ]);
 
     const handleSilenceNumber = () => {
         const trimmed = phoneNumber.trim();
         if (!trimmed) return;
-
-        // Prevent duplicates
-        if (!silencedList.includes(trimmed)) {
-            setSilencedList(prev => [trimmed, ...prev]);
-        }
-
+        addSilencedNumber(trimmed);
         setPhoneNumber('');
     };
 
     const handleRemoveNumber = (num: string) => {
-        setSilencedList(prev => prev.filter(n => n !== num));
+        removeSilencedNumber(num);
     };
 
     return (
@@ -88,10 +81,10 @@ export default function SilencedScreen() {
 
                 {/* List */}
                 <View style={styles.listSection}>
-                    <Text style={styles.listTitle}>{t('silenced.listTitle', { count: silencedList.length })}</Text>
+                    <Text style={styles.listTitle}>{t('silenced.listTitle', { count: silencedNumbers.length })}</Text>
 
                     <View style={styles.list}>
-                        {silencedList.map((num) => (
+                        {silencedNumbers.map((num) => (
                             <View key={num} style={styles.listItem}>
                                 <View style={styles.listItemLeft}>
                                     <View style={styles.iconWrap}>
@@ -111,7 +104,7 @@ export default function SilencedScreen() {
                             </View>
                         ))}
 
-                        {silencedList.length === 0 && (
+                        {silencedNumbers.length === 0 && (
                             <View style={styles.emptyState}>
                                 <MaterialCommunityIcons
                                     name="phone-check-outline"
@@ -145,8 +138,7 @@ const styles = StyleSheet.create({
     description: {
         color: Colors.textMuted,
         fontSize: FontSize.sm,
-        fontFamily: 'Inter',
-        lineHeight: 20,
+            lineHeight: 20,
         marginBottom: 32,
     },
     // Input
@@ -168,8 +160,7 @@ const styles = StyleSheet.create({
         borderColor: Colors.borderDark,
         paddingHorizontal: 16,
         paddingVertical: 14,
-        fontFamily: 'Inter',
-    },
+        },
     addBtn: {
         width: 52,
         height: 52,
@@ -200,8 +191,7 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         letterSpacing: 2,
         textTransform: 'uppercase',
-        fontFamily: 'Inter',
-    },
+        },
     list: {
         gap: 12,
     },
@@ -232,8 +222,7 @@ const styles = StyleSheet.create({
         color: Colors.textPrimary,
         fontSize: FontSize.base,
         fontWeight: '500',
-        fontFamily: 'Inter',
-    },
+        },
     removeBtn: {
         paddingHorizontal: 12,
         paddingVertical: 6,
@@ -242,8 +231,7 @@ const styles = StyleSheet.create({
         color: Colors.primary,
         fontSize: FontSize.sm,
         fontWeight: '600',
-        fontFamily: 'Inter',
-    },
+        },
     // Empty state
     emptyState: {
         alignItems: 'center',
@@ -259,6 +247,5 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
         fontSize: FontSize.base,
         fontWeight: '500',
-        fontFamily: 'Inter',
-    },
+        },
 });
