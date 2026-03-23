@@ -16,6 +16,13 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
+> [!IMPORTANT]
+> **Native Features & Expo Go**:
+> Core spam filtration (SMS interception) and iOS App Group syncing require native modules that are **not** included in the standard Expo Go client.
+> - For full functionality, you must build a **Development Client**: `npx eas build --profile development --platform ios` (or android).
+> - If you run in Expo Go, the app will function as a model playground, but background filtering and keyword syncing will be disabled with a warning log.
+
+
 In the output, you'll find options to open the app in a
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)

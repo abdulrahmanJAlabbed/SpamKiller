@@ -21,15 +21,23 @@ const ANDROID_PREFS = 'SpamKillerPrefs';
 export async function syncKeywordsToExtension(keywords: string[]): Promise<void> {
     try {
         if (Platform.OS === 'ios') {
-            await SharedGroupPreferences.setItem('blockedKeywords', keywords, APP_GROUP);
-            console.log(`[KeywordSync] Synced ${keywords.length} keywords to iOS App Group: ${APP_GROUP}`);
+            if (SharedGroupPreferences) {
+                await SharedGroupPreferences.setItem('blockedKeywords', keywords, APP_GROUP);
+                console.log(`[KeywordSync] Synced ${keywords.length} keywords to iOS App Group: ${APP_GROUP}`);
+            } else {
+                console.warn('[KeywordSync] SharedGroupPreferences is null. This usually means you are running in Expo Go. For iOS keyword sync functionality, please use a development build.');
+            }
         } else if (Platform.OS === 'android') {
             // Android SharedPreferences usually store strings or string sets easily.
             // react-native-shared-group-preferences stringifies JSON by default under the hood.
             // Our Java receiver expects a comma separated string to make parsing simple.
             const keywordsStr = keywords.join(',');
-            await SharedGroupPreferences.setItem('blockedKeywords', keywordsStr, ANDROID_PREFS);
-            console.log(`[KeywordSync] Synced keywords to Android SharedPreferences: ${ANDROID_PREFS}`);
+            if (SharedGroupPreferences) {
+                await SharedGroupPreferences.setItem('blockedKeywords', keywordsStr, ANDROID_PREFS);
+                console.log(`[KeywordSync] Synced keywords to Android SharedPreferences: ${ANDROID_PREFS}`);
+            } else {
+                console.warn('[KeywordSync] SharedGroupPreferences is null. For Android keyword sync (Java receiver), please use a development build.');
+            }
         }
     } catch (err) {
         console.error('[KeywordSync] Failed to sync keywords to native storage (is the dev client built?):', err);

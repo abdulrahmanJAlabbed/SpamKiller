@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "676216029139",
+    "project_id": "spamkiller-bc784",
+    "storage_bucket": "spamkiller-bc784.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676216029139:android:becbc1b86dd04033bd3926",
+        "android_client_info": {
+          "package_name": "com.cellaz.SpamKiller"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB62lGdOfAXxuFFXhVakzdWRI-hX7d6LrI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

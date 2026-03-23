@@ -102,6 +102,11 @@ export async function startSmsListener(
     try {
         // Dynamic import to avoid crash on iOS
         const SmsModule = require('@maniac-tech/react-native-expo-read-sms');
+        if (!SmsModule || !SmsModule.startReadSMS) {
+            console.warn('[SmsListener] SMS module not available. This usually means you are running in Expo Go. For SMS interception, please use a development build.');
+            return false;
+        }
+
         const { startReadSMS } = SmsModule;
 
         startReadSMS((status: string, sms: string, error: any) => {
