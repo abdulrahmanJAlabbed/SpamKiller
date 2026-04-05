@@ -9,7 +9,7 @@
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 
 <!-- Replace the line below with your mockup image after generating it on shots.so -->
-[Aegis OS Mockup](./assets/aegis_mockup.png)
+[Aegis OS Mockup](./assets/Appimg/aegis_mockup.png)
 
 </div>
 
@@ -48,7 +48,7 @@ No alerts. No noise. Just silence.
 
 | Home | Blocklist | Silenced Numbers | Categories | Settings |
 |------|-----------|-----------------|------------|----------|
-| <img src="./assets/screen_home.png" width="160"/> | <img src="./assets/screen_blocklist.png" width="160"/> | <img src="./assets/screen_silenced.png" width="160"/> | <img src="./assets/screen_categories.png" width="160"/> | <img src="./assets/screen_settings.png" width="160"/> |
+| <img src="./assets/Appimg/home.png" width="160"/> | <img src="./assets/Appimg/blocklist.png" width="160"/> | <img src="./assets/Appimg/silenced.png" width="160"/> | <img src="./assets/Appimg/categories.png" width="160"/> | <img src="./assets/Appimg/settings.png" width="160"/> |
 
 > 📸 Replace the image paths above with your actual screenshot files.
 
