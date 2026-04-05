@@ -4,12 +4,9 @@
 
 **Silently neutralizing spam, scams, and unwanted calls — powered by AI.**
 
-![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS-black?style=flat-square)
-![Status](https://img.shields.io/badge/status-active-00e5ff?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 
 <!-- Replace the line below with your mockup image after generating it on shots.so -->
-[Aegis OS Mockup](./assets/Appimg/aegis_mockup.png)
+<img src="./assets/Appimg/aegis_mockup.png" width="160"/>
 
 </div>
 
@@ -75,10 +72,10 @@ No alerts. No noise. Just silence.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/aegis-os.git
+git clone https://github.com/abdulrahmanJAlabbed/SpamKiller.git
 
 # Navigate into the project directory
-cd aegis-os
+cd SpamKiller
 
 # Install dependencies
 npm install
