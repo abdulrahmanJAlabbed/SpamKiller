@@ -161,14 +161,12 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         letterSpacing: 2,
         textTransform: 'uppercase',
-        fontFamily: 'Inter',
-    },
+        },
     usageCount: {
         color: Colors.primary,
         fontSize: FontSize.base,
         fontWeight: '600',
-        fontFamily: 'Inter',
-    },
+        },
     progressTrack: {
         height: 6,
         backgroundColor: Colors.primaryLight,
@@ -189,14 +187,12 @@ const styles = StyleSheet.create({
     usageFooterText: {
         color: Colors.textMuted,
         fontSize: FontSize.sm,
-        fontFamily: 'Inter',
-    },
+        },
     upgradeLink: {
         color: Colors.primary,
         fontSize: FontSize.sm,
         fontWeight: '600',
-        fontFamily: 'Inter',
-    },
+        },
     section: {
         marginBottom: 32,
     },
@@ -207,8 +203,7 @@ const styles = StyleSheet.create({
         letterSpacing: 2,
         textTransform: 'uppercase',
         marginBottom: 24,
-        fontFamily: 'Inter',
-    },
+        },
     tagsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -228,8 +223,7 @@ const styles = StyleSheet.create({
         color: Colors.textPrimary,
         fontSize: FontSize.xl,
         paddingVertical: 16,
-        fontFamily: 'Inter',
-    },
+        },
     addButton: {
         width: 40,
         height: 40,
@@ -246,6 +240,5 @@ const styles = StyleSheet.create({
         fontSize: FontSize.sm,
         marginTop: 12,
         fontWeight: '300',
-        fontFamily: 'Inter',
-    },
+        },
 });

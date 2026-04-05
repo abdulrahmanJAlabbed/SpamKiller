@@ -1,10 +1,6 @@
-/**
- * ToggleSwitch — Custom animated toggle switch matching Shield OS purple design
- */
-
 import { Colors } from '@/constants/theme';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet } from 'react-native';
 
 interface ToggleSwitchProps {
     value: boolean;
@@ -16,11 +12,11 @@ export function ToggleSwitch({ value, onValueChange, disabled = false }: ToggleS
     const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
 
     useEffect(() => {
-        Animated.spring(animatedValue, {
+        Animated.timing(animatedValue, {
             toValue: value ? 1 : 0,
+            duration: 300,
+            easing: Easing.out(Easing.exp),
             useNativeDriver: false,
-            friction: 8,
-            tension: 60,
         }).start();
     }, [value, animatedValue]);
 

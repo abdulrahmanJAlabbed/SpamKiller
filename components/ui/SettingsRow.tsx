@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { ToggleSwitch } from './ToggleSwitch';
 
 interface SettingsRowProps {
@@ -17,6 +18,9 @@ interface SettingsRowProps {
     onValueChange?: (val: boolean) => void;
     onPress?: () => void;
     showChevron?: boolean;
+    labelStyle?: any;
+    descriptionStyle?: any;
+    iconColor?: string;
 }
 
 export function SettingsRow({
@@ -27,26 +31,37 @@ export function SettingsRow({
     onValueChange,
     onPress,
     showChevron,
+    labelStyle,
+    descriptionStyle,
+    iconColor,
 }: SettingsRowProps) {
     const { i18n } = useTranslation();
     const isRTL = i18n.dir() === 'rtl';
     const Container = onPress ? Pressable : View;
 
+    const handlePress = () => {
+        if (onPress) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onPress();
+        }
+    };
+
     return (
         <Container
-            onPress={onPress}
+            onPress={handlePress}
+            accessibilityRole={onPress ? "button" : undefined}
             style={({ pressed }: { pressed?: boolean }) => [
                 styles.container,
                 { flexDirection: isRTL ? 'row-reverse' : 'row' },
                 pressed && styles.pressed,
             ]}
         >
-            <View style={styles.iconContainer}>
-                <MaterialCommunityIcons name={icon} size={22} color={Colors.primary} />
+            <View style={[styles.iconContainer, iconColor === '#ef4444' && { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                <MaterialCommunityIcons name={icon} size={22} color={iconColor || Colors.primary} />
             </View>
             <View style={[styles.content, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
-                <Text style={styles.label}>{label}</Text>
-                {description && <Text style={styles.description}>{description}</Text>}
+                <Text style={[styles.label, labelStyle]}>{label}</Text>
+                {description && <Text style={[styles.description, descriptionStyle]}>{description}</Text>}
             </View>
             {value !== undefined && onValueChange && (
                 <ToggleSwitch value={value} onValueChange={onValueChange} />

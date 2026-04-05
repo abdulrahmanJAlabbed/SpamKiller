@@ -2,56 +2,71 @@
  * Home Dashboard — System Protected status, threats counter, recent blocked messages
  */
 
-import { BackgroundGlow } from '@/components/layout/BackgroundGlow';
+import { BackgroundTexture } from '@/components/layout/BackgroundTexture';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { BorderRadius, Colors, FontSize, Spacing } from '@/constants/theme';
 import { useSpamFilter, type ScanResultItem } from '@/contexts/SpamFilterContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLocalSearchParams, router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Animated,
+  Easing,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withRepeat, 
+  withTiming, 
+  Easing as ReanimatedEasing,
+  interpolate,
+  interpolateColor
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
-function BlockedMessageCard({ item, t }: { item: ScanResultItem; t: any }) {
+const BlockedMessageCard = React.memo(({ item, t, onPress }: { item: ScanResultItem; t: any; onPress: () => void }) => {
   const timeAgo = getTimeAgo(item.timestamp, t);
   const { i18n } = useTranslation();
   const isRTL = i18n.dir() === 'rtl';
 
   return (
-    <View style={[styles.blockedCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-      <View style={[styles.blockedLeft, { flexDirection: isRTL ? 'row-reverse' : 'row', marginRight: isRTL ? 0 : 12, marginLeft: isRTL ? 12 : 0 }]}>
-        <View style={styles.blockedIconWrap}>
-          <MaterialCommunityIcons name="shield-off" size={18} color="#ef4444" />
+    <Pressable onPress={onPress}>
+      <View style={[styles.blockedCard, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+        <View style={[styles.blockedLeft, { flexDirection: isRTL ? 'row-reverse' : 'row', marginRight: isRTL ? 0 : 12, marginLeft: isRTL ? 12 : 0 }]}>
+          <View style={styles.blockedIconWrap}>
+            <MaterialCommunityIcons name="shield-off" size={18} color="#ef4444" />
+          </View>
+          <View style={[styles.blockedInfo, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+            <Text style={[styles.blockedSender, { textAlign: isRTL ? 'right' : 'left' }]} numberOfLines={1}>
+              {item.sender || t('home.unknown')}
+            </Text>
+            <Text style={[styles.blockedText, { textAlign: isRTL ? 'right' : 'left' }]} numberOfLines={1}>
+              {item.text}
+            </Text>
+          </View>
         </View>
-        <View style={[styles.blockedInfo, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
-          <Text style={[styles.blockedSender, { textAlign: isRTL ? 'right' : 'left' }]} numberOfLines={1}>
-            {item.sender || t('home.unknown')}
-          </Text>
-          <Text style={[styles.blockedText, { textAlign: isRTL ? 'right' : 'left' }]} numberOfLines={1}>
-            {item.text}
-          </Text>
+        <View style={[styles.blockedRight, { alignItems: isRTL ? 'flex-start' : 'flex-end' }]}>
+          <Text style={styles.blockedTime}>{timeAgo}</Text>
+          <View style={styles.blockedBadge}>
+            <Text style={[styles.blockedBadgeText, { textAlign: isRTL ? 'right' : 'left' }]}>
+              {item.result.matchedKeywords.length > 0
+                ? item.result.matchedKeywords[0]
+                : t('home.spam')}
+            </Text>
+          </View>
         </View>
       </View>
-      <View style={[styles.blockedRight, { alignItems: isRTL ? 'flex-start' : 'flex-end' }]}>
-        <Text style={styles.blockedTime}>{timeAgo}</Text>
-        <View style={styles.blockedBadge}>
-          <Text style={[styles.blockedBadgeText, { textAlign: isRTL ? 'right' : 'left' }]}>
-            {item.result.matchedKeywords.length > 0
-              ? item.result.matchedKeywords[0]
-              : t('home.spam')}
-          </Text>
-        </View>
-      </View>
-    </View>
+    </Pressable>
   );
-}
+});
 
 function getTimeAgo(timestamp: number, t: any): string {
   const diff = Date.now() - timestamp;
@@ -65,54 +80,116 @@ function getTimeAgo(timestamp: number, t: any): string {
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { threatsBlocked, scanResults, aiEnabled } = useSpamFilter();
+  const { threatsBlocked, totalScanned, scanResults, aiEnabled } = useSpamFilter();
   const { t, i18n } = useTranslation();
   const isRTL = i18n.dir() === 'rtl';
 
-  const shieldScale = useRef(new Animated.Value(0.8)).current;
-  const shieldOpacity = useRef(new Animated.Value(0)).current;
+  // Reanimated values for 60fps performance
+  const shieldScaleBase = useSharedValue(0.8);
+  const shieldOpacity = useSharedValue(0);
+  const breathValue = useSharedValue(0);
+  const rgbValue = useSharedValue(0);
 
   // Visual toggle for SpamKiller ON/OFF
   const [isActive, setIsActive] = useState(true);
+  const [selectedMessage, setSelectedMessage] = useState<ScanResultItem | null>(null);
+  const { filter } = useLocalSearchParams<{ filter: string }>();
 
-  const blockedMessages = scanResults.filter((r) => r.result.isSpam).slice(0, 5);
+  // Filter messages by category if param exists
+  const blockedMessages = React.useMemo(() => {
+    return scanResults
+      .filter((r) => r.result.isSpam)
+      .filter((r) => {
+        if (!filter) return true;
+        // Normalize: handle both 'scam' and 'catScam' formats
+        const itemCat = (r.result.category || 'others').toLowerCase();
+        const searchCat = filter.toLowerCase();
+        return itemCat === searchCat || itemCat === `cat${searchCat}` || (searchCat.startsWith('cat') && itemCat === searchCat.substring(3));
+      });
+  }, [scanResults, filter]);
+
+  const displayedMessages = React.useMemo(() => {
+    return filter ? blockedMessages : blockedMessages.slice(0, 5);
+  }, [blockedMessages, filter]);
 
   useEffect(() => {
-    // Shield entrance animation
-    Animated.parallel([
-      Animated.spring(shieldScale, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shieldOpacity, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    // Shield entrance
+    shieldScaleBase.value = withTiming(1, { duration: 600, easing: ReanimatedEasing.out(ReanimatedEasing.back(1.5)) });
+    shieldOpacity.value = withTiming(1, { duration: 600 });
+
+    // Continuous breathing on UI thread
+    breathValue.value = withRepeat(
+      withTiming(1, { duration: 2500, easing: ReanimatedEasing.inOut(ReanimatedEasing.ease) }),
+      -1,
+      true
+    );
+
+    // continuous RGB cycle on UI thread
+    rgbValue.value = withRepeat(
+      withTiming(1, { duration: 4000, easing: ReanimatedEasing.linear }),
+      -1,
+      false
+    );
   }, []);
 
   const handleToggleShield = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsActive(!isActive);
-    Animated.sequence([
-      Animated.timing(shieldScale, { toValue: 0.9, duration: 100, useNativeDriver: true }),
-      Animated.spring(shieldScale, { toValue: 1, friction: 8, useNativeDriver: true }),
-    ]).start();
+    shieldScaleBase.value = withTiming(0.9, { duration: 100 }, () => {
+      shieldScaleBase.value = withTiming(1, { duration: 200, easing: ReanimatedEasing.out(ReanimatedEasing.back(2)) });
+    });
   };
+
+  // Reanimated Styles
+  const shieldAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: shieldScaleBase.value * (1 + breathValue.value * 0.05) }
+    ],
+    opacity: shieldOpacity.value
+  }));
+
+  const pulseRingStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(breathValue.value, [0, 1], [1, 1.2]) }],
+    opacity: interpolate(breathValue.value, [0, 1], [0.2, 0.05])
+  }));
+
+  const aiIconAnimatedStyle = useAnimatedStyle(() => {
+    const borderColor = interpolateColor(
+      rgbValue.value,
+      [0, 0.25, 0.5, 0.75, 1],
+      ['#4285f4', '#9b72cb', '#d96570', '#1facff', '#4285f4']
+    );
+
+    return {
+      borderColor: aiEnabled ? borderColor : Colors.borderDark,
+      shadowColor: aiEnabled ? borderColor : 'transparent',
+      shadowOpacity: aiEnabled ? interpolate(breathValue.value, [0, 1], [0.6, 0.9]) : 0,
+      shadowRadius: interpolate(breathValue.value, [0, 1], [8, 16]),
+      borderWidth: aiEnabled ? 1.5 : 1,
+    };
+  });
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <BackgroundGlow />
+      <BackgroundTexture />
 
       {/* Header */}
       <View style={[styles.header, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-        <View style={[styles.headerLeft, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-          <MaterialCommunityIcons name="shield" size={22} color={Colors.primary} />
-          <Text style={styles.headerTitle}>{t('home.shieldOS')}</Text>
-        </View>
-        {/* Profile Avatar removed per user request */}
+        <Pressable 
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            aiEnabled ? router.push('/ai-settings') : router.push({ pathname: '/upgrade', params: { variant: 'ai' } });
+          }}
+        >
+          <Animated.View style={[styles.headerAiIcon, aiIconAnimatedStyle]}>
+            <MaterialCommunityIcons 
+              name="creation" 
+              size={22} 
+              color={aiEnabled ? Colors.white : Colors.textMuted} 
+            />
+          </Animated.View>
+        </Pressable>
+        <Text style={styles.headerTitle}>AEGIS OS</Text>
       </View>
 
       {/* Main content */}
@@ -120,82 +197,135 @@ export default function HomeScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Shield icon (Clickable Toggle) */}
-        <Animated.View
-          style={[
-            styles.shieldContainer,
-            {
-              transform: [{ scale: shieldScale }],
-              opacity: shieldOpacity,
-            },
-          ]}
-        >
-          <Pressable onPress={handleToggleShield}>
-            <View style={[
-              styles.shieldCircle,
-              !isActive && styles.shieldCircleInactive
-            ]}>
-              <MaterialCommunityIcons
-                name={isActive ? "shield-check" : "shield-off-outline"}
-                size={64}
-                color={isActive ? Colors.primary : Colors.textMuted}
-              />
-            </View>
-          </Pressable>
-        </Animated.View>
-
-        {/* Status text */}
-        <Text style={styles.statusTitle}>
-          {isActive ? t('home.systemProtected') : t('home.protectionDisabled')}
-        </Text>
-        <Text style={[styles.statusSubtitle, { textAlign: 'center' }]}>
-          {isActive ? t('home.activelyFiltering') : t('home.tapToEnable')}
-        </Text>
-
-        {aiEnabled && isActive && (
-          <View style={[styles.proBadge, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-            <MaterialCommunityIcons name="star-four-points" size={16} color="#f59e0b" />
-            <Text style={styles.proBadgeText}>{t('home.neuralEngineActive')}</Text>
+        <View style={styles.shieldSection}>
+          <View style={styles.shieldOuter}>
+            <Animated.View style={[styles.shieldInner, shieldAnimatedStyle]}>
+              <Pressable onPress={handleToggleShield}>
+                <View style={[
+                  styles.shieldCore,
+                  !isActive && styles.shieldCoreInactive
+                ]}>
+                  <MaterialCommunityIcons
+                    name={isActive ? "shield-star" : "shield-off"}
+                    size={72}
+                    color={isActive ? Colors.primary : Colors.textMuted}
+                  />
+                </View>
+              </Pressable>
+            </Animated.View>
+            {isActive && (
+              <Animated.View style={[styles.pulseRing, pulseRingStyle]} />
+            )}
           </View>
-        )}
+          
+          {/* Status Rings */}
+          <View style={styles.statusInfo}>
+            <Text style={styles.statusTitle} numberOfLines={1} adjustsFontSizeToFit>
+              {isActive ? t('home.systemProtected') : t('home.protectionDisabled')}
+            </Text>
+            <View style={styles.privilegedLine} />
+            <Text style={styles.statusSubtitle} numberOfLines={1} adjustsFontSizeToFit>
+              {isActive ? t('home.activelyFiltering') : t('home.tapToEnable')}
+            </Text>
+          </View>
+        </View>
 
-        {/* Threats blocked card */}
-        <GlassCard style={styles.statsCard}>
-          <Text style={styles.statsLabel}>{t('home.threatsBlocked')}</Text>
-          <Text style={styles.statsValue}>{threatsBlocked.toLocaleString()}</Text>
-        </GlassCard>
+        <View style={styles.statRow}>
+          <GlassCard style={styles.miniStat}>
+            <Text style={styles.miniStatLabel} numberOfLines={1} adjustsFontSizeToFit>{t('home.threatsBlocked')}</Text>
+            <Text style={styles.miniStatValue} numberOfLines={1}>{threatsBlocked}</Text>
+          </GlassCard>
+          <GlassCard style={styles.miniStat}>
+            <Text style={styles.miniStatLabel} numberOfLines={1} adjustsFontSizeToFit>{t('home.totalScanned')}</Text>
+            <Text style={styles.miniStatValue} numberOfLines={1}>{totalScanned}</Text>
+          </GlassCard>
+        </View>
 
         {/* Recent Blocked Messages */}
         <View style={styles.recentSection}>
           <View style={[styles.recentHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-            <Text style={[styles.recentTitle, { textAlign: isRTL ? 'right' : 'left' }]}>{t('home.recentBlocked')}</Text>
-            {blockedMessages.length > 0 && (
+            <Text style={[styles.recentTitle, { textAlign: isRTL ? 'right' : 'left' }]}>
+              {filter ? t('home.filteredByCategory', { category: filter.toUpperCase() }) : t('home.recentBlocked')}
+            </Text>
+            {displayedMessages.length > 0 && (
               <View style={styles.recentCountBadge}>
-                <Text style={styles.recentCountText}>{blockedMessages.length}</Text>
+                <Text style={styles.recentCountText}>{displayedMessages.length}</Text>
               </View>
             )}
           </View>
 
-          {blockedMessages.length > 0 ? (
-            <View style={styles.recentList}>
-              {blockedMessages.map((item) => (
-                <BlockedMessageCard key={item.id} item={item} t={t} />
-              ))}
-            </View>
-          ) : (
-            <View style={styles.recentEmpty}>
-              <MaterialCommunityIcons
-                name="shield-check-outline"
-                size={32}
-                color={Colors.primaryBorder}
-              />
-              <Text style={styles.recentEmptyText}>
-                {t('home.noBlockedMessages')}
-              </Text>
-            </View>
-          )}
+          <View style={styles.recentList}>
+            {displayedMessages.length > 0 ? (
+              displayedMessages.map((item) => (
+                <BlockedMessageCard
+                  key={item.id}
+                  item={item}
+                  t={t}
+                  onPress={() => setSelectedMessage(item)}
+                />
+              ))
+            ) : (
+              <View style={styles.recentEmpty}>
+                <MaterialCommunityIcons
+                  name="shield-check-outline"
+                  size={32}
+                  color={Colors.primaryBorder}
+                />
+                <Text style={styles.recentEmptyText}>
+                  {t('home.noBlockedMessages')}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
+
+        <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Engine Verdict Modal */}
+      <Modal
+        visible={!!selectedMessage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedMessage(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setSelectedMessage(null)}>
+          <Animated.View style={styles.modalContentWrapper}>
+            <GlassCard style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalIconBox}>
+                  <MaterialCommunityIcons name="shield-search" size={24} color={Colors.primary} />
+                </View>
+                <Text style={styles.modalTitle}>{t('home.verdictTitle')}</Text>
+              </View>
+
+              <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+                {selectedMessage && (
+                  <View style={styles.modalBody}>
+                    <View style={styles.verdictBox}>
+                      <Text style={styles.verdictLabel}>{t('home.originalMessage')}</Text>
+                      <Text style={styles.fullMessageText}>{selectedMessage.text}</Text>
+                    </View>
+
+                    <View style={styles.verdictSection}>
+                      <View style={styles.verdictHead}>
+                        <Text style={styles.verdictLabel}>{t('home.verdictNeural')}</Text>
+                        <Text style={styles.verdictValue}>{Math.round((selectedMessage.result.aiScore || 0.95) * 100)}% Match</Text>
+                      </View>
+                      <View style={styles.verdictBarContainer}>
+                        <View style={[styles.verdictBar, { width: `${(selectedMessage.result.aiScore || 0.95) * 100}%` }]} />
+                      </View>
+                    </View>
+                    <Pressable style={styles.closeBtn} onPress={() => setSelectedMessage(null)}>
+                      <Text style={styles.closeBtnText}>{t('home.close')}</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </ScrollView>
+            </GlassCard>
+          </Animated.View>
+        </Pressable>
+      </Modal>
 
       {/* Bottom spacer for tab bar */}
       <View style={{ height: 100 }} />
@@ -225,7 +355,16 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: '500',
     letterSpacing: -0.3,
-    fontFamily: 'Inter',
+  },
+  headerAiIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Colors.surfaceDark,
+    borderWidth: 1,
+    borderColor: Colors.borderDark,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     alignItems: 'center',
@@ -233,80 +372,99 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 40,
   },
-  shieldContainer: {
+  shieldSection: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  shieldOuter: {
+    width: 200,
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 32,
   },
-  shieldCircle: {
+  shieldInner: {
+    zIndex: 2,
+  },
+  shieldCore: {
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: Colors.primaryGlow,
-    borderWidth: 0.5,
-    borderColor: Colors.primaryBorder,
+    backgroundColor: Colors.surfaceDark,
+    borderWidth: 1,
+    borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 8,
   },
-  shieldCircleInactive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+  shieldCoreInactive: {
     borderColor: Colors.borderDark,
-    borderWidth: 1,
+    shadowOpacity: 0,
+  },
+  pulseRing: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 0.5,
+    borderColor: Colors.primary,
+    opacity: 0.2,
+  },
+  statusInfo: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  privilegedLine: {
+    width: 40,
+    height: 1,
+    backgroundColor: Colors.primary,
+    opacity: 0.3,
+    marginVertical: 4,
   },
   statusTitle: {
     color: Colors.textPrimary,
-    fontSize: FontSize['4xl'],
-    fontWeight: '300',
-    letterSpacing: -0.5,
-    marginBottom: 8,
-    fontFamily: 'Inter',
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: 3,
+    textTransform: 'uppercase',
   },
   statusSubtitle: {
     color: Colors.textMuted,
-    fontSize: FontSize.base,
-    letterSpacing: 0.3,
-    marginBottom: 32,
-    fontFamily: 'Inter',
-  },
-  proBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-  },
-  proBadgeText: {
-    color: '#f59e0b',
     fontSize: FontSize.xs,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    fontFamily: 'Inter',
-  },
-  statsCard: {
-    width: '80%',
-    maxWidth: 280,
-    alignItems: 'center',
-    marginBottom: 32,
-    backgroundColor: Colors.primaryGlow,
-  },
-  statsLabel: {
-    color: Colors.textMuted,
-    fontSize: FontSize.sm,
     fontWeight: '500',
-    letterSpacing: 2,
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
-    marginBottom: 8,
-    fontFamily: 'Inter',
+    opacity: 0.7,
   },
-  statsValue: {
+  statRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 40,
+    width: '100%',
+  },
+  miniStat: {
+    flex: 1,
+    padding: 16,
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceDark,
+    borderWidth: 1,
+    borderColor: Colors.borderDark,
+  },
+  miniStatLabel: {
+    color: Colors.textMuted,
+    fontSize: FontSize['2xs'],
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    marginBottom: 8,
+  },
+  miniStatValue: {
     color: Colors.textPrimary,
-    fontSize: FontSize['4xl'],
-    fontWeight: '300',
-    fontFamily: 'Inter',
+    fontSize: FontSize['2xl'],
+    fontWeight: '900',
   },
   // Recent blocked
   recentSection: {
@@ -323,7 +481,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: '700',
     letterSpacing: 2,
-    fontFamily: 'Inter',
   },
   recentCountBadge: {
     backgroundColor: 'rgba(239, 68, 68, 0.15)',
@@ -335,7 +492,6 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     fontSize: FontSize['2xs'],
     fontWeight: '700',
-    fontFamily: 'Inter',
   },
   recentList: {
     gap: 8,
@@ -372,13 +528,11 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontSize: FontSize.sm,
     fontWeight: '600',
-    fontFamily: 'Inter',
   },
   blockedText: {
     color: Colors.textMuted,
     fontSize: FontSize.xs,
     marginTop: 2,
-    fontFamily: 'Inter',
   },
   blockedRight: {
     alignItems: 'flex-end',
@@ -387,7 +541,6 @@ const styles = StyleSheet.create({
   blockedTime: {
     color: Colors.textMuted,
     fontSize: FontSize['2xs'],
-    fontFamily: 'Inter',
   },
   blockedBadge: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -400,7 +553,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize['2xs'],
     fontWeight: '600',
     textTransform: 'uppercase',
-    fontFamily: 'Inter',
   },
   recentEmpty: {
     alignItems: 'center',
@@ -411,12 +563,137 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceDark,
     borderWidth: 1,
     borderColor: Colors.borderDark,
+    width: '100%',
   },
   recentEmptyText: {
     color: Colors.textMuted,
     fontSize: FontSize.sm,
     textAlign: 'center',
     lineHeight: 20,
-    fontFamily: 'Inter',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContentWrapper: {
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalContent: {
+    backgroundColor: Colors.surfaceDark,
+    borderColor: Colors.borderDark,
+    padding: 24,
+    borderRadius: 32,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
+  modalIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 245, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    color: Colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  modalScroll: {
+    maxHeight: 400,
+  },
+  modalBody: {
+    gap: 20,
+  },
+  verdictSection: {
+    gap: 10,
+  },
+  verdictHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  verdictBox: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    gap: 8,
+  },
+  verdictLabel: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+  verdictBarContainer: {
+    height: 4,
+    backgroundColor: Colors.borderDark,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  verdictBar: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+  },
+  verdictValue: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  fullMessageText: {
+    color: Colors.textPrimary,
+    fontSize: FontSize.md,
+    lineHeight: 22,
+    fontWeight: '500',
+  },
+  verdictText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '400',
+  },
+  engineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(0, 245, 255, 0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 6,
+  },
+  engineBadgeText: {
+    color: Colors.primary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  closeBtn: {
+    marginTop: 10,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: Colors.surfaceDark,
+    borderWidth: 1,
+    borderColor: Colors.borderDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnText: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
 });

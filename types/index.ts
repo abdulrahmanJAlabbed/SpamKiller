@@ -33,7 +33,7 @@ export interface LanguageOption {
     flag: string;
 }
 
-export type UpgradeVariant = 'filter' | 'ai';
+export type UpgradeVariant = 'filter' | 'ai' | 'numbers';
 
 export interface UpgradeConfig {
     title: string;

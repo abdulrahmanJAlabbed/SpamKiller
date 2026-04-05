@@ -27,6 +27,7 @@ export const unstable_settings = {
 export default function RootLayout() {
   const [appIsUnlocked, setAppIsUnlocked] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     // 1. Check Biometric Auth
@@ -58,6 +59,14 @@ export default function RootLayout() {
     };
     checkBiometrics();
 
+    const checkOnboarding = async () => {
+      const complete = await AsyncStorage.getItem('@onboarding_complete');
+      if (complete !== 'true') {
+        setShowOnboarding(true);
+      }
+    };
+    checkOnboarding();
+
     // 2. Audio config
     setAudioModeAsync({
       shouldPlayInBackground: false,
@@ -65,12 +74,9 @@ export default function RootLayout() {
       playsInSilentMode: false,
     }).catch((err) => console.warn('Audio config error:', err));
 
-    // 3. Notifications & SMS Listener
+    // 3. Notifications
     registerForPushNotifications();
     const notifCleanup = setupNotificationListeners();
-    if (Platform.OS === 'android') {
-      initSmsListener();
-    }
 
     return notifCleanup;
   }, []);
@@ -87,8 +93,8 @@ export default function RootLayout() {
     return (
       <View style={[styles.root, styles.lockedScreen]}>
         <MaterialCommunityIcons name="shield-lock" size={64} color={Colors.primary} />
-        <Text style={styles.lockedTitle}>App Locked</Text>
-        <Text style={styles.lockedSubtitle}>Authentication required to access SpamKiller.</Text>
+        <Text style={styles.lockedTitle}>Shield Active</Text>
+        <Text style={styles.lockedSubtitle}>Identity verification required to open Aegis.</Text>
       </View>
     );
   }
@@ -98,6 +104,7 @@ export default function RootLayout() {
       <SpamFilterProvider>
         <View style={styles.root}>
           <Stack
+            initialRouteName={showOnboarding ? 'onboarding' : '(tabs)'}
             screenOptions={{
               headerShown: false,
               contentStyle: { backgroundColor: Colors.backgroundDark },
@@ -105,6 +112,10 @@ export default function RootLayout() {
             }}
           >
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen 
+              name="onboarding" 
+              options={{ gestureEnabled: false }} 
+            />
             <Stack.Screen
               name="ai-settings"
               options={{
@@ -126,33 +137,6 @@ export default function RootLayout() {
   );
 }
 
-/**
- * Request SMS permissions once, then start the background listener.
- * On subsequent launches, permissions are already granted → auto-starts.
- */
-async function initSmsListener() {
-  const granted = await requestSmsPermissions();
-  if (!granted) {
-    console.log('[RootLayout] SMS permissions not granted, skipping listener');
-    return;
-  }
-
-  // Default keywords — the SpamFilterContext will update these via the listener
-  const defaultKeywords = ['spam', 'promo', 'crypto', 'winner', 'gift', 'click', 'verify'];
-
-  const { notifySpamSilenced } = require('@/services/notifications');
-
-  await startSmsListener(
-    defaultKeywords,
-    { aggressiveness: 50, keywordWeighting: 75 },
-    // onSpam: fire a silent notification
-    (msg) => {
-      notifySpamSilenced(msg.sender, msg.text);
-    },
-    // onHam: do nothing — let the regular SMS notification through
-    undefined,
-  );
-}
 
 const styles = StyleSheet.create({
   root: {
@@ -168,11 +152,9 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontSize: FontSize['2xl'],
     fontWeight: '600',
-    fontFamily: 'Inter',
   },
   lockedSubtitle: {
     color: Colors.textMuted,
     fontSize: FontSize.sm,
-    fontFamily: 'Inter',
   },
 });

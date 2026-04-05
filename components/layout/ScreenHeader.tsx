@@ -67,7 +67,6 @@ const styles = StyleSheet.create({
         fontSize: FontSize.xl,
         fontWeight: '600',
         letterSpacing: -0.3,
-        fontFamily: 'Inter',
     },
     iconBtn: {
         width: 40,

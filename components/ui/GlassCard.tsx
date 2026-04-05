@@ -4,11 +4,11 @@
 
 import { BorderRadius, Colors } from '@/constants/theme';
 import React, { type ReactNode } from 'react';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type ViewStyle, type StyleProp, Platform } from 'react-native';
 
 interface GlassCardProps {
     children: ReactNode;
-    style?: ViewStyle;
+    style?: StyleProp<ViewStyle>;
     variant?: 'default' | 'solid' | 'primary';
 }
 
@@ -25,6 +25,17 @@ const styles = StyleSheet.create({
         borderRadius: BorderRadius.xl,
         padding: 24,
         overflow: 'hidden',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.4,
+                shadowRadius: 12,
+            },
+            android: {
+                elevation: 4,
+            },
+        }),
     },
 });
 
