@@ -35,34 +35,19 @@ export async function syncKeywordsToExtension(keywords: string[]): Promise<void>
         }
 
         if (Platform.OS === 'ios') {
-<<<<<<< HEAD
-            if (SharedGroupPreferences) {
-                await SharedGroupPreferences.setItem('blockedKeywords', keywords, APP_GROUP);
-                console.log(`[KeywordSync] Synced ${keywords.length} keywords to iOS App Group: ${APP_GROUP}`);
-            } else {
-                console.warn('[KeywordSync] SharedGroupPreferences is null. This usually means you are running in Expo Go. For iOS keyword sync functionality, please use a development build.');
-=======
             if (typeof SharedGroupPreferences?.setItem === 'function') {
                 await SharedGroupPreferences.setItem('blockedKeywords', keywords, APP_GROUP);
                 console.log(`[KeywordSync] Synced ${keywords.length} keywords to iOS App Group: ${APP_GROUP}`);
->>>>>>> 62ad8dbada940b8f76c2a5d515af99f3371e7e48
+            } else {
+                console.warn('[KeywordSync] SharedGroupPreferences.setItem is not a function. Use a development build for iOS keyword sync.');
             }
         } else if (Platform.OS === 'android') {
             const keywordsStr = keywords.join(',');
-<<<<<<< HEAD
-            if (SharedGroupPreferences) {
-                await SharedGroupPreferences.setItem('blockedKeywords', keywordsStr, ANDROID_PREFS);
-                console.log(`[KeywordSync] Synced keywords to Android SharedPreferences: ${ANDROID_PREFS}`);
-            } else {
-                console.warn('[KeywordSync] SharedGroupPreferences is null. For Android keyword sync (Java receiver), please use a development build.');
-=======
-            // Add safety check for Android SharedGroupPreferences compatibility
             if (typeof SharedGroupPreferences?.setItem === 'function') {
                 await SharedGroupPreferences.setItem('blockedKeywords', keywordsStr, ANDROID_PREFS);
                 console.log(`[KeywordSync] Synced keywords to Android SharedPreferences: ${ANDROID_PREFS}`);
             } else {
                 console.warn('[KeywordSync] SharedGroupPreferences.setItem is not a function on this platform');
->>>>>>> 62ad8dbada940b8f76c2a5d515af99f3371e7e48
             }
         }
     } catch (err) {
