@@ -6,7 +6,7 @@
 
 
 <!-- Replace the line below with your mockup image after generating it on shots.so -->
-<img src="./assets/Appimg/aegis_mockup.png" width="160"/>
+<img src="./assets/Appimg/aegis_mockup.png" width="640"/>
 
 </div>
 
