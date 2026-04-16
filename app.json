@@ -17,6 +17,8 @@
         "NSContactsUsageDescription": "SpamKiller requires contacts access to ensure messages from your personal contacts are never incorrectly flagged as spam."
       }
     },
+
+    
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0d1117",
