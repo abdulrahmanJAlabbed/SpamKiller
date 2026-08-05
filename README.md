@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ Aegis OS
+# 🛡️ SpamKiller (Aegis OS)
 
 **Silently neutralizing spam, scams, and unwanted calls — powered by AI.**
 
@@ -156,3 +156,4 @@ This project is licensed under the [MIT License](./LICENSE).
 Made with 🛡️ by the Aegis team · [Report a Bug](https://github.com/your-username/aegis-os/issues) · [Request a Feature](https://github.com/your-username/aegis-os/issues)
 
 </div>
+
